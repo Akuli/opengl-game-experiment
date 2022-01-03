@@ -11,9 +11,16 @@ struct GaussianCurveMountain {
 	float xzscale, yscale, centerx, centerz;
 };
 
+#define SECTION_SIZE 8  // side length of section square on xz plane
+#define YTABLE_ITEMS_PER_UNIT 5  // how frequently to cache computed heights
+
 struct Section {
 	int startx, startz;
 	struct GaussianCurveMountain mountains[100];
+
+	// Cached values for height of map, depends on heights of this and neighbor sections
+	float ytable[SECTION_SIZE*YTABLE_ITEMS_PER_UNIT + 1][SECTION_SIZE*YTABLE_ITEMS_PER_UNIT + 1];
+	bool ytableready;
 };
 
 struct Map {
