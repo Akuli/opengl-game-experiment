@@ -27,16 +27,6 @@ void map_drawgrid(const struct Section *sect, const struct Camera *cam)
 			float z = sect->startz + zidx * (1.0f/GRID_LINES_PER_UNIT);
 			float y = map_getheight(sect, x, z);
 			heights[xidx][zidx] = y;
-
-			for (int i = 0; i < sizeof(cam->visplanes)/sizeof(cam->visplanes[0]); i++) {
-				if (!plane_whichside(cam->visplanes[i], (Vec3){x,y,z})) {
-					heights[xidx][zidx] = NAN;
-					goto next_point;
-				}
-			}
-
-		next_point:
-			continue;
 		}
 	}
 
@@ -51,10 +41,8 @@ void map_drawgrid(const struct Section *sect, const struct Camera *cam)
 			float y_x2z1 = heights[xidx+1][zidx];
 			float y_x1z2 = heights[xidx][zidx+1];
 
-			if (!isnan(y_x1z1) && !isnan(y_x1z2))
-				camera_drawline(cam, (Vec3){x1, y_x1z1, z1}, (Vec3){x1, y_x1z2, z2});
-			if (!isnan(y_x1z1) && !isnan(y_x2z1))
-				camera_drawline(cam, (Vec3){x1, y_x1z1, z1}, (Vec3){x2, y_x2z1, z1});
+			camera_drawline(cam, (Vec3){x1, y_x1z1, z1}, (Vec3){x1, y_x1z2, z2});
+			camera_drawline(cam, (Vec3){x1, y_x1z1, z1}, (Vec3){x2, y_x2z1, z1});
 		}
 	}
 }

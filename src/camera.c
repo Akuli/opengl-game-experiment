@@ -76,8 +76,27 @@ static void swap(int *a, int *b)
 	*b = tmp;
 }
 
+static bool point_is_in_view(const struct Camera *cam, Vec3 p)
+{
+	for (int i = 0; i < sizeof(cam->visplanes)/sizeof(cam->visplanes[0]); i++) {
+		if (!plane_whichside(cam->visplanes[i], p))
+			return false;
+	}
+	return true;
+}
+
 void camera_drawline(const struct Camera *cam, Vec3 start3, Vec3 end3)
 {
+	// make sure that camera_point_cam2screen will work
+	if (!plane_whichside(cam->visplanes[CAMERA_CAMPLANE_IDX], start3) ||
+		!plane_whichside(cam->visplanes[CAMERA_CAMPLANE_IDX], end3))
+	{
+		return;
+	}
+
+	if (!point_is_in_view(cam, start3) && !point_is_in_view(cam, end3))
+		return;
+
 	Vec2 start = camera_point_cam2screen(cam, camera_point_world2cam(cam, start3));
 	Vec2 end = camera_point_cam2screen(cam, camera_point_world2cam(cam, end3));
 	int x1 = (int)start.x;
