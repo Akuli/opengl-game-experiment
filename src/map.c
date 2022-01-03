@@ -67,7 +67,7 @@ static void generate_section(struct Section *sect, int startx, int startz)
 
 static unsigned section_hash(int startx, int startz)
 {
-	return (unsigned)(startx / SECTION_SIZE) ^ (unsigned)(startz / SECTION_SIZE);
+	return (unsigned)(startx / SECTION_SIZE * 17) ^ (unsigned)(startz / SECTION_SIZE * 29);
 }
 
 static struct Section *find_section(const struct Map *map, int startx, int startz)
@@ -117,6 +117,15 @@ static void add_section_to_itable(struct Map *map, int sectidx)
 	while (map->itable[h] != -1)
 		h = (h+1) % map->sectsalloced;
 	map->itable[h] = sectidx;
+
+	// For checking whether hash function is working well
+	/*
+	char s[2000] = {0};
+	SDL_assert(map->sectsalloced < sizeof s);
+	for (unsigned h = 0; h < map->sectsalloced; h++)
+		s[h] = map->itable[h]==-1 ? ' ' : 'x';
+	log_printf("|%s|", s);
+	*/
 }
 
 static struct Section *find_or_add_section(struct Map *map, int startx, int startz)
@@ -142,17 +151,17 @@ static void ensure_ytable_is_ready(struct Map *map, struct Section *sect)
 	if (sect->ytableready)
 		return;
 
-	struct Section *sections[9];
-	int i = 0;
-	sections[i++] = sect;
-	sections[i++] = find_or_add_section(map, sect->startx - SECTION_SIZE, sect->startz - SECTION_SIZE);
-	sections[i++] = find_or_add_section(map, sect->startx - SECTION_SIZE, sect->startz);
-	sections[i++] = find_or_add_section(map, sect->startx - SECTION_SIZE, sect->startz + SECTION_SIZE);
-	sections[i++] = find_or_add_section(map, sect->startx, sect->startz - SECTION_SIZE);
-	sections[i++] = find_or_add_section(map, sect->startx, sect->startz + SECTION_SIZE);
-	sections[i++] = find_or_add_section(map, sect->startx + SECTION_SIZE, sect->startz - SECTION_SIZE);
-	sections[i++] = find_or_add_section(map, sect->startx + SECTION_SIZE, sect->startz);
-	sections[i++] = find_or_add_section(map, sect->startx + SECTION_SIZE, sect->startz + SECTION_SIZE);
+	struct Section *sections[9] = {
+		find_or_add_section(map, sect->startx - SECTION_SIZE, sect->startz - SECTION_SIZE),
+		find_or_add_section(map, sect->startx - SECTION_SIZE, sect->startz),
+		find_or_add_section(map, sect->startx - SECTION_SIZE, sect->startz + SECTION_SIZE),
+		find_or_add_section(map, sect->startx, sect->startz - SECTION_SIZE),
+		sect,
+		find_or_add_section(map, sect->startx, sect->startz + SECTION_SIZE),
+		find_or_add_section(map, sect->startx + SECTION_SIZE, sect->startz - SECTION_SIZE),
+		find_or_add_section(map, sect->startx + SECTION_SIZE, sect->startz),
+		find_or_add_section(map, sect->startx + SECTION_SIZE, sect->startz + SECTION_SIZE),
+	};
 
 	for (int xidx = 0; xidx <= SECTION_SIZE*YTABLE_ITEMS_PER_UNIT; xidx++) {
 		for (int zidx = 0; zidx <= SECTION_SIZE*YTABLE_ITEMS_PER_UNIT; zidx++) {
@@ -189,7 +198,7 @@ float map_getheight(struct Map *map, float x, float z)
 		+ 8		neighbor sections
 		+ 1		empty slot in itable to ensure "while (itable[h] != -1)" loops will terminate
 	*/
-	while (map->nsections+1+8+1 >= map->sectsalloced*0.7f)  // TODO: choose good magic number?
+	while (map->nsections+1+8+1 > map->sectsalloced*0.7f)  // TODO: choose good magic number?
 		grow_section_arrays(map);
 
 	struct Section *sect = find_or_add_section(map, mx, mz);
