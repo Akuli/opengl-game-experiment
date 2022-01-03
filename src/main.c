@@ -2,9 +2,11 @@
 #include <stdint.h>
 #include "map.h"
 #include "camera.h"
+#include "linalg.h"
 #include "log.h"
 
-#define MOVING_SPEED 1.0f
+#define MOVING_SPEED 1.5f
+#define TURNING_SPEED 1.0f
 
 int main(void)
 {
@@ -28,7 +30,8 @@ int main(void)
 		.cam2world.rows = {{1,0,0},{0,1,0},{0,0,1}},
 	};
 
-	int xdir = 0, zdir = 0;
+	int zdir = 0, angledir = 0;
+	float camangle;
 
 	while(1) {
 		uint64_t end = SDL_GetPerformanceCounter() + delay;
@@ -47,6 +50,12 @@ int main(void)
 			case SDL_SCANCODE_S:
 				zdir = 1;
 				break;
+			case SDL_SCANCODE_A:
+				angledir = -1;
+				break;
+			case SDL_SCANCODE_D:
+				angledir = 1;
+				break;
 			default:
 				break;
 			}
@@ -58,6 +67,10 @@ int main(void)
 			case SDL_SCANCODE_S:
 				zdir = 0;
 				break;
+			case SDL_SCANCODE_A:
+			case SDL_SCANCODE_D:
+				angledir = 0;
+				break;
 			default:
 				break;
 			}
@@ -67,8 +80,14 @@ int main(void)
 			break;
 		}
 
-		cam.location.x += xdir*MOVING_SPEED/CAMERA_FPS;
-		cam.location.z += zdir*MOVING_SPEED/CAMERA_FPS;
+		if (zdir != 0)
+			vec3_add_inplace(&cam.location, mat3_mul_vec3(cam.cam2world, (Vec3){ 0, 0, zdir*MOVING_SPEED/CAMERA_FPS }));
+
+		if (angledir != 0) {
+			camangle += angledir*TURNING_SPEED/CAMERA_FPS;
+			cam.cam2world = mat3_rotation_xz(camangle);
+			cam.world2cam = mat3_rotation_xz(-camangle);
+		}
 
 		// surface can change as events are handled, or be NULL when game starts
 		cam.surface = SDL_GetWindowSurface(wnd);

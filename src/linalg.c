@@ -2,6 +2,7 @@
 #include "linalg.h"
 
 extern inline Vec3 vec3_add(Vec3 a, Vec3 b);
+extern inline void vec3_add_inplace(Vec3 *a, Vec3 b);
 extern inline Vec3 vec3_sub(Vec3 a, Vec3 b);
 extern inline float vec3_dot(Vec3 a, Vec3 b);
 extern inline float mat3_det(Mat3 M);
