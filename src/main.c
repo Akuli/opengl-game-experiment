@@ -13,19 +13,17 @@ int main(void)
 {
 	srand(time(NULL));
 
-	struct Section sect = { .startx = 0, .startz = -10 };
-	map_generate(&sect);
-
 	SDL_Window *wnd = SDL_CreateWindow("title", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, CAMERA_SCREEN_WIDTH, CAMERA_SCREEN_HEIGHT, 0);
 	SDL_assert(wnd);
 
 	uint64_t delay = SDL_GetPerformanceFrequency() / CAMERA_FPS;
 
+	struct Map map = {0};
 	struct Camera cam = {
 		.screencentery = CAMERA_SCREEN_HEIGHT/2,
 		.world2cam.rows = {{1,0,0},{0,1,0},{0,0,1}},
 		.cam2world.rows = {{1,0,0},{0,1,0},{0,0,1}},
-		.location = {0,map_getheight(&sect, 0, 0) + 1,0},
+		.location = {1, map_getheight(&map, 1, 1) + 1, 1},
 	};
 
 	int zdir = 0, angledir = 0;
@@ -91,7 +89,7 @@ int main(void)
 
 		if (zdir != 0) {
 			vec3_add_inplace(&cam.location, mat3_mul_vec3(cam.cam2world, (Vec3){ 0, 0, zdir*MOVING_SPEED/CAMERA_FPS }));
-			cam.location.y = map_getheight(&sect, cam.location.x, cam.location.z) + 1;
+			cam.location.y = map_getheight(&map, cam.location.x, cam.location.z) + 1;
 		}
 
 		if (angledir != 0) {
@@ -105,7 +103,7 @@ int main(void)
 		if (cam.surface) {
 			camera_update_visplanes(&cam);
 			SDL_FillRect(cam.surface, NULL, 0);
-			map_drawgrid(&sect, &cam);
+			map_drawgrid(&map, &cam);
 			SDL_UpdateWindowSurface(wnd);
 		}
 

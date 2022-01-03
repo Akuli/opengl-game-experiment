@@ -3,8 +3,6 @@
 
 #include "camera.h"
 
-#define MAP_SECTION_SIZE 8
-
 struct GaussianCurveMountain {
 	/*
 	y = yscale*e^(-(((x - centerx) / xzscale)^2 + ((z - centerz) / xzscale)^2))
@@ -18,9 +16,13 @@ struct Section {
 	struct GaussianCurveMountain mountains[100];
 };
 
-void map_generate(struct Section *sect);
-float map_getheight(const struct Section *sect, float x, float z);
-void map_drawgrid(const struct Section *sect, const struct Camera *cam);
+struct Map {
+	struct Section *sections;
+	int nsections;
+};
+
+float map_getheight(struct Map *map, float x, float z);
+void map_drawgrid(struct Map *map, const struct Camera *cam);
 
 
 #endif
