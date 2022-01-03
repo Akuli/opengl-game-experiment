@@ -3,8 +3,6 @@
 #include "log.h"
 #include <math.h>
 
-#define GRID_LINES_PER_UNIT 10
-
 static float uniform_random_float(float min, float max)
 {
 	return min + rand()*(max-min)/(float)RAND_MAX;
@@ -54,32 +52,44 @@ float map_getheight(const struct Section *sect, float x, float z)
 	return y;
 }
 
+#define GRID_LINES_PER_UNIT 10
+#define RADIUS 5
+
 void map_drawgrid(const struct Section *sect, const struct Camera *cam)
 {
-	static float heights[MAP_SECTION_SIZE*GRID_LINES_PER_UNIT + 1][MAP_SECTION_SIZE*GRID_LINES_PER_UNIT + 1];
+	float spacing = 1.0f / GRID_LINES_PER_UNIT;
 
-	for (int xidx = 0; xidx <= MAP_SECTION_SIZE*GRID_LINES_PER_UNIT; xidx++) {
-		for (int zidx = 0; zidx <= MAP_SECTION_SIZE*GRID_LINES_PER_UNIT; zidx++) {
-			float x = sect->startx + xidx * (1.0f/GRID_LINES_PER_UNIT);
-			float z = sect->startz + zidx * (1.0f/GRID_LINES_PER_UNIT);
-			float y = map_getheight(sect, x, z);
-			heights[xidx][zidx] = y;
+	static float heights[2*RADIUS*GRID_LINES_PER_UNIT + 1][2*RADIUS*GRID_LINES_PER_UNIT + 1];
+
+	// Middle element of heights goes to this location
+	float midx = roundf(cam->location.x / spacing) * spacing;
+	float midz = roundf(cam->location.z / spacing) * spacing;
+
+	for (int xidx = 0; xidx <= 2*RADIUS*GRID_LINES_PER_UNIT; xidx++) {
+		for (int zidx = 0; zidx <= 2*RADIUS*GRID_LINES_PER_UNIT; zidx++) {
+			float x = midx + (xidx - RADIUS*GRID_LINES_PER_UNIT)*spacing;
+			float z = midz + (zidx - RADIUS*GRID_LINES_PER_UNIT)*spacing;
+			float dx = x - cam->location.x;
+			float dz = z - cam->location.z;
+			if (dx*dx + dz*dz > RADIUS*RADIUS)
+				heights[xidx][zidx] = NAN;
+			else
+				heights[xidx][zidx] = map_getheight(sect, x, z);
 		}
 	}
 
-	for (int xidx = 0; xidx < MAP_SECTION_SIZE*GRID_LINES_PER_UNIT; xidx++) {
-		for (int zidx = 0; zidx < MAP_SECTION_SIZE*GRID_LINES_PER_UNIT; zidx++) {
-			float x1 = sect->startx + xidx * (1.0f/GRID_LINES_PER_UNIT);
-			float x2 = sect->startx + (xidx+1) * (1.0f/GRID_LINES_PER_UNIT);
-			float z1 = sect->startz + zidx * (1.0f/GRID_LINES_PER_UNIT);
-			float z2 = sect->startz + (zidx+1) * (1.0f/GRID_LINES_PER_UNIT);
+	for (int xidx = 0; xidx < 2*RADIUS*GRID_LINES_PER_UNIT; xidx++) {
+		for (int zidx = 0; zidx < 2*RADIUS*GRID_LINES_PER_UNIT; zidx++) {
+			float y = heights[xidx][zidx];
+			if (isnan(y))
+				continue;
+			float x = midx + (xidx - RADIUS*GRID_LINES_PER_UNIT)*spacing;
+			float z = midz + (zidx - RADIUS*GRID_LINES_PER_UNIT)*spacing;
 
-			float y_x1z1 = heights[xidx][zidx];
-			float y_x2z1 = heights[xidx+1][zidx];
-			float y_x1z2 = heights[xidx][zidx+1];
-
-			camera_drawline(cam, (Vec3){x1, y_x1z1, z1}, (Vec3){x1, y_x1z2, z2});
-			camera_drawline(cam, (Vec3){x1, y_x1z1, z1}, (Vec3){x2, y_x2z1, z1});
+			if (!isnan(heights[xidx+1][zidx]))
+				camera_drawline(cam, (Vec3){x,y,z}, (Vec3){x+spacing,heights[xidx+1][zidx],z});
+			if (!isnan(heights[xidx][zidx+1]))
+				camera_drawline(cam, (Vec3){x,y,z}, (Vec3){x,heights[xidx][zidx+1],z+spacing});
 		}
 	}
 }
