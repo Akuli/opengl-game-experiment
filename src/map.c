@@ -15,7 +15,7 @@ static float uniform_random_float(float min, float max)
 
 static void generate_section(struct Section *sect, int startx, int startz)
 {
-	log_printf("Generating a new section to x[%d,%d] z[%d,%d]", startx, startz, startx+SECTION_SIZE, startz+SECTION_SIZE);
+	log_printf("Generating a new section: startx=%d startz=%d", startx, startz);
 	SDL_assert(startx % SECTION_SIZE == 0);
 	SDL_assert(startz % SECTION_SIZE == 0);
 	sect->startx = startx;
@@ -67,6 +67,76 @@ static void generate_section(struct Section *sect, int startx, int startz)
 	}
 }
 
+static unsigned section_hash(int startx, int startz)
+{
+	return (unsigned)(startx / SECTION_SIZE) ^ (unsigned)(startz / SECTION_SIZE);
+}
+
+static struct Section *find_section(const struct Map *map, int startx, int startz)
+{
+	if (map->sectsalloced == 0)
+		return NULL;
+
+	unsigned h = section_hash(startx, startz) % map->sectsalloced;
+	while (map->itable[h] != -1) {
+		struct Section *sec = &map->sections[map->itable[h]];
+		if (sec->startx == startx && sec->startz == startz)
+			return sec;
+		h = (h+1) % map->sectsalloced;
+	}
+	return NULL;
+}
+
+static void grow_section_arrays(struct Map *map)
+{
+	unsigned oldalloc = map->sectsalloced;
+	map->sectsalloced *= 2;
+	if (map->sectsalloced == 0)
+		map->sectsalloced = 2;  // TODO: increase after debugging
+	log_printf("Growing section itable: %u --> %u", oldalloc, map->sectsalloced);
+
+	map->itable = realloc(map->itable, sizeof(map->itable[0])*map->sectsalloced);
+	map->sections = realloc(map->sections, sizeof(map->sections[0])*map->sectsalloced);
+	SDL_assert(map->itable && map->sections);
+
+	for (int h = 0; h < map->sectsalloced; h++)
+		map->itable[h] = -1;
+
+	for (int i = 0; i < map->nsections; i++) {
+		unsigned h = section_hash(map->sections[i].startx, map->sections[i].startz) % map->sectsalloced;
+		while (map->itable[h] != -1)
+			h = (h+1) % map->sectsalloced;
+		map->itable[h] = i;
+	}
+
+}
+
+static void add_section_to_itable(struct Map *map, int sectidx)
+{
+	int startx = map->sections[sectidx].startx;
+	int startz = map->sections[sectidx].startz;
+	unsigned h = section_hash(startx, startz) % map->sectsalloced;
+	while (map->itable[h] != -1)
+		h = (h+1) % map->sectsalloced;
+	map->itable[h] = sectidx;
+}
+
+static struct Section *find_or_add_section(struct Map *map, int startx, int startz)
+{
+	struct Section *res = find_section(map, startx, startz);
+	if (!res) {
+		// Make sure there's always 1 empty slot, makes searches easier
+		if (map->nsections+2 >= map->sectsalloced*0.7f)  // TODO: choose good magic number
+			grow_section_arrays(map);
+
+		res = &map->sections[map->nsections++];
+		generate_section(res, startx, startz);
+		add_section_to_itable(map, map->nsections - 1);
+		log_printf("Added a section, now there are %d sections", map->nsections);
+	}
+	return res;
+}
+
 // FIXME: will be horribly slow with large maps
 float map_getheight(struct Map *map, float x, float z)
 {
@@ -74,46 +144,26 @@ float map_getheight(struct Map *map, float x, float z)
 	int mx = (int)floorf(x / SECTION_SIZE) * SECTION_SIZE;
 	int mz = (int)floorf(z / SECTION_SIZE) * SECTION_SIZE;
 
-	// Find which sections we need to generate
-	int needsects[9][2];
-	int nneedsects = 0;
-	for (int x = mx - SECTION_SIZE; x <= mx + SECTION_SIZE; x += SECTION_SIZE) {
-		for (int z = mz - SECTION_SIZE; z <= mz + SECTION_SIZE; z += SECTION_SIZE) {
-			bool found = false;
-			for (int i = 0; i < map->nsections; i++) {
-				if (map->sections[i].startx == x && map->sections[i].startz == z) {
-					found = true;
-					break;
-				}
-			}
-			if (!found) {
-				needsects[nneedsects][0] = x;
-				needsects[nneedsects][1] = z;
-				nneedsects++;
-			}
-		}
-	}
-
-	if (nneedsects != 0) {
-		map->nsections += nneedsects;
-		map->sections = realloc(map->sections, sizeof map->sections[0] * map->nsections);
-		SDL_assert(map->sections);
-
-		for (int i = 0; i < nneedsects; i++)
-			generate_section(&map->sections[map->nsections - nneedsects + i], needsects[i][0], needsects[i][1]);
-
-		log_printf("Now there are %d sections", map->nsections);
-	}
+	struct Section *sects[9] = {
+		find_or_add_section(map, mx - SECTION_SIZE, mz - SECTION_SIZE),
+		find_or_add_section(map, mx - SECTION_SIZE, mz),
+		find_or_add_section(map, mx - SECTION_SIZE, mz + SECTION_SIZE),
+		find_or_add_section(map, mx, mz - SECTION_SIZE),
+		find_or_add_section(map, mx, mz),
+		find_or_add_section(map, mx, mz + SECTION_SIZE),
+		find_or_add_section(map, mx + SECTION_SIZE, mz - SECTION_SIZE),
+		find_or_add_section(map, mx + SECTION_SIZE, mz),
+		find_or_add_section(map, mx + SECTION_SIZE, mz + SECTION_SIZE),
+	};
 
 	float y = 0;
-	for (struct Section *sect = map->sections; sect < map->sections+map->nsections; sect++) {
-		if (abs(sect->startx - mx) <= SECTION_SIZE && abs(sect->startz - mz) <= SECTION_SIZE) {
-			for (int i = 0; i < sizeof(sect->mountains)/sizeof(sect->mountains[0]); i++) {
-				float dx = x - sect->mountains[i].centerx;
-				float dz = z - sect->mountains[i].centerz;
-				float xzscale = sect->mountains[i].xzscale;
-				y += sect->mountains[i].yscale * expf(-1/(xzscale*xzscale) * (dx*dx + dz*dz));
-			}
+	for (int s = 0; s < 9; s++) {
+		struct Section *sect = sects[s];
+		for (int i = 0; i < sizeof(sect->mountains)/sizeof(sect->mountains[0]); i++) {
+			float dx = x - sect->mountains[i].centerx;
+			float dz = z - sect->mountains[i].centerz;
+			float xzscale = sect->mountains[i].xzscale;
+			y += sect->mountains[i].yscale * expf(-1/(xzscale*xzscale) * (dx*dx + dz*dz));
 		}
 	}
 	return y;

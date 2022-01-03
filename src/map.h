@@ -19,6 +19,9 @@ struct Section {
 struct Map {
 	struct Section *sections;
 	int nsections;
+
+	int *itable;  // Hash table of indexes into sections array
+	unsigned sectsalloced;  // space allocated in itable and sections
 };
 
 float map_getheight(struct Map *map, float x, float z);
