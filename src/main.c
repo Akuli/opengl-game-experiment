@@ -32,7 +32,7 @@ int main(void)
 	};
 
 	int zdir = 0, angledir = 0;
-	float camangle;
+	float camangle = 0;
 
 	double percentsum = 0;
 	int percentcount = 0;
@@ -68,12 +68,20 @@ int main(void)
 		case SDL_KEYUP:
 			switch(e.key.keysym.scancode) {
 			case SDL_SCANCODE_W:
+				if (zdir == -1)
+					zdir = 0;
+				break;
 			case SDL_SCANCODE_S:
-				zdir = 0;
+				if (zdir == 1)
+					zdir = 0;
 				break;
 			case SDL_SCANCODE_A:
+				if (angledir == -1)
+					angledir = 0;
+				break;
 			case SDL_SCANCODE_D:
-				angledir = 0;
+				if (angledir == 1)
+					angledir = 0;
 				break;
 			default:
 				break;
