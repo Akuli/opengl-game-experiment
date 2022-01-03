@@ -13,11 +13,11 @@ static float uniform_random_float(float min, float max)
 
 static void generate_section(struct Section *sect, int startx, int startz)
 {
-	log_printf("Generating a new section: startx=%d startz=%d", startx, startz);
 	SDL_assert(startx % SECTION_SIZE == 0);
 	SDL_assert(startz % SECTION_SIZE == 0);
 	sect->startx = startx;
 	sect->startz = startz;
+	sect->ytableready = false;
 
 	int i;
 	int n = sizeof(sect->mountains)/sizeof(sect->mountains[0]);
@@ -90,8 +90,8 @@ static void grow_section_arrays(struct Map *map)
 	unsigned oldalloc = map->sectsalloced;
 	map->sectsalloced *= 2;
 	if (map->sectsalloced == 0)
-		map->sectsalloced = 2;  // TODO: increase after debugging
-	log_printf("Growing section itable: %u --> %u", oldalloc, map->sectsalloced);
+		map->sectsalloced = 16;  // chosen so that a few grows occur during startup (exposes bugs)
+	log_printf("growing section arrays: %u --> %u", oldalloc, map->sectsalloced);
 
 	map->itable = realloc(map->itable, sizeof(map->itable[0])*map->sectsalloced);
 	map->sections = realloc(map->sections, sizeof(map->sections[0])*map->sectsalloced);
@@ -127,10 +127,12 @@ static struct Section *find_or_add_section(struct Map *map, int startx, int star
 		if (map->nsections+2 >= map->sectsalloced*0.7f)  // TODO: choose good magic number
 			grow_section_arrays(map);
 
-		res = &map->sections[map->nsections++];
+		log_printf("there are %d sections, adding one more to startx=%d startz=%d",
+			map->nsections, startx, startz);
+		res = &map->sections[map->nsections];
 		generate_section(res, startx, startz);
-		add_section_to_itable(map, map->nsections - 1);
-		log_printf("Added a section, now there are %d sections", map->nsections);
+		add_section_to_itable(map, map->nsections);
+		map->nsections++;
 	}
 	return res;
 }
@@ -140,20 +142,20 @@ static void ensure_ytable_is_ready(struct Map *map, struct Section *sect)
 	if (sect->ytableready)
 		return;
 
-	struct Section *sections[9] = {
-		sect,
-		find_or_add_section(map, sect->startx - SECTION_SIZE, sect->startz - SECTION_SIZE),
-		find_or_add_section(map, sect->startx - SECTION_SIZE, sect->startz),
-		find_or_add_section(map, sect->startx - SECTION_SIZE, sect->startz + SECTION_SIZE),
-		find_or_add_section(map, sect->startx, sect->startz - SECTION_SIZE),
-		find_or_add_section(map, sect->startx, sect->startz + SECTION_SIZE),
-		find_or_add_section(map, sect->startx + SECTION_SIZE, sect->startz - SECTION_SIZE),
-		find_or_add_section(map, sect->startx + SECTION_SIZE, sect->startz),
-		find_or_add_section(map, sect->startx + SECTION_SIZE, sect->startz + SECTION_SIZE),
-	};
+	struct Section *sections[9];
+	int i = 0;
+	sections[i++] = sect;
+	sections[i++] = find_or_add_section(map, sect->startx - SECTION_SIZE, sect->startz - SECTION_SIZE);
+	sections[i++] = find_or_add_section(map, sect->startx - SECTION_SIZE, sect->startz);
+	sections[i++] = find_or_add_section(map, sect->startx - SECTION_SIZE, sect->startz + SECTION_SIZE);
+	sections[i++] = find_or_add_section(map, sect->startx, sect->startz - SECTION_SIZE);
+	sections[i++] = find_or_add_section(map, sect->startx, sect->startz + SECTION_SIZE);
+	sections[i++] = find_or_add_section(map, sect->startx + SECTION_SIZE, sect->startz - SECTION_SIZE);
+	sections[i++] = find_or_add_section(map, sect->startx + SECTION_SIZE, sect->startz);
+	sections[i++] = find_or_add_section(map, sect->startx + SECTION_SIZE, sect->startz + SECTION_SIZE);
 
 	for (int xidx = 0; xidx <= SECTION_SIZE*YTABLE_ITEMS_PER_UNIT; xidx++) {
-		for (int zidx = 0; zidx <= SECTION_SIZE*YTABLE_ITEMS_PER_UNIT; xidx++) {
+		for (int zidx = 0; zidx <= SECTION_SIZE*YTABLE_ITEMS_PER_UNIT; zidx++) {
 			float gap = 1.0f / YTABLE_ITEMS_PER_UNIT;
 			float x = sect->startx + xidx*gap;
 			float z = sect->startz + zidx*gap;
@@ -161,28 +163,38 @@ static void ensure_ytable_is_ready(struct Map *map, struct Section *sect)
 			float y = 0;
 			for (struct Section **s = sections; s < sections+9; s++) {
 				for (int i = 0; i < sizeof((*s)->mountains) / sizeof((*s)->mountains[0]); i++) {
-					float dx = x - sect->mountains[i].centerx;
-					float dz = z - sect->mountains[i].centerz;
-					float xzscale = sect->mountains[i].xzscale;
-					y += sect->mountains[i].yscale * expf(-1/(xzscale*xzscale) * (dx*dx + dz*dz));
+					float dx = x - (*s)->mountains[i].centerx;
+					float dz = z - (*s)->mountains[i].centerz;
+					float xzscale = (*s)->mountains[i].xzscale;
+					y += (*s)->mountains[i].yscale * expf(-1/(xzscale*xzscale) * (dx*dx + dz*dz));
 				}
 			}
 			sect->ytable[xidx][zidx] = y;
 		}
 	}
+
+	sect->ytableready = true;
 }
 
-// FIXME: will be horribly slow with large maps
 float map_getheight(struct Map *map, float x, float z)
 {
 	// coords of middle section
 	int mx = (int)floorf(x / SECTION_SIZE) * SECTION_SIZE;
 	int mz = (int)floorf(z / SECTION_SIZE) * SECTION_SIZE;
 
+	/*
+	Allocate many sections now, doing it later can mess up pointers into sections array
+	We need, at worst:
+		1		new section
+		+ 8		neighbor sections
+		+ 1		empty slot in itable to ensure "while (itable[h] != -1)" loops will terminate
+	*/
+	while (map->nsections+1+8+1 >= map->sectsalloced*0.7f)  // TODO: choose good magic number?
+		grow_section_arrays(map);
+
 	struct Section *sect = find_or_add_section(map, mx, mz);
 	ensure_ytable_is_ready(map, sect);
 
-	float gap = 1.0f / YTABLE_ITEMS_PER_UNIT;
 	float ixfloat = (x - sect->startx)*YTABLE_ITEMS_PER_UNIT;
 	float izfloat = (z - sect->startz)*YTABLE_ITEMS_PER_UNIT;
 	int ix = (int)floorf(ixfloat);
@@ -199,7 +211,7 @@ float map_getheight(struct Map *map, float x, float z)
 }
 
 #define GRID_LINES_PER_UNIT 5
-#define RADIUS 5
+#define RADIUS 10
 
 void map_drawgrid(struct Map *map, const struct Camera *cam)
 {
