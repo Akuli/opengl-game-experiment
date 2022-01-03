@@ -5,7 +5,7 @@
 
 #define GRID_LINES_PER_UNIT 10
 
-static float calculate_y(const struct Section *sect, float x, float z)
+float map_getheight(const struct Section *sect, float x, float z)
 {
 	float y = 0;
 	for (int i = 0; i < sizeof(sect->mountains)/sizeof(sect->mountains[0]); i++) {
@@ -24,7 +24,7 @@ void map_drawgrid(const struct Section *sect, const struct Camera *cam)
 		for (int zidx = 0; zidx <= MAP_SECTION_SIZE*GRID_LINES_PER_UNIT; zidx++) {
 			float x = sect->startx + xidx * (1.0f/GRID_LINES_PER_UNIT);
 			float z = sect->startz + zidx * (1.0f/GRID_LINES_PER_UNIT);
-			float y = calculate_y(sect, x, z);
+			float y = map_getheight(sect, x, z);
 			heights[xidx][zidx] = y;
 
 			for (int i = 0; i < sizeof(cam->visplanes)/sizeof(cam->visplanes[0]); i++) {

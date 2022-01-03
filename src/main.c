@@ -5,8 +5,8 @@
 #include "linalg.h"
 #include "log.h"
 
-#define MOVING_SPEED 1.5f
-#define TURNING_SPEED 1.0f
+#define MOVING_SPEED 2.0f
+#define TURNING_SPEED 2.0f
 
 int main(void)
 {
@@ -28,13 +28,17 @@ int main(void)
 		.screencentery = CAMERA_SCREEN_HEIGHT/2,
 		.world2cam.rows = {{1,0,0},{0,1,0},{0,0,1}},
 		.cam2world.rows = {{1,0,0},{0,1,0},{0,0,1}},
+		.location = {0,1,0},
 	};
 
 	int zdir = 0, angledir = 0;
 	float camangle;
 
+	double percentsum = 0;
+	int percentcount = 0;
+
 	while(1) {
-		uint64_t end = SDL_GetPerformanceCounter() + delay;
+		uint64_t start = SDL_GetPerformanceCounter();
 
 		SDL_Event e;
 		while (SDL_PollEvent(&e)) switch(e.type) {
@@ -80,8 +84,10 @@ int main(void)
 			break;
 		}
 
-		if (zdir != 0)
+		if (zdir != 0) {
 			vec3_add_inplace(&cam.location, mat3_mul_vec3(cam.cam2world, (Vec3){ 0, 0, zdir*MOVING_SPEED/CAMERA_FPS }));
+			cam.location.y = map_getheight(&sect, cam.location.x, cam.location.z) + 1;
+		}
 
 		if (angledir != 0) {
 			camangle += angledir*TURNING_SPEED/CAMERA_FPS;
@@ -98,9 +104,17 @@ int main(void)
 			SDL_UpdateWindowSurface(wnd);
 		}
 
+		percentsum += (SDL_GetPerformanceCounter() - start) / (double)delay;
+		percentcount++;
+		if (percentcount == CAMERA_FPS) {
+			log_printf("speed percentage average: %.2f", percentsum/percentcount*100);
+			percentsum = 0;
+			percentcount = 0;
+		}
+
 		uint64_t remains;
 		// If no time remaining, subtraction below overflows (unsigned overflow isn't ub)
-		while ((remains = end - SDL_GetPerformanceCounter()) < (uint64_t)(0.9*(double)UINT64_MAX)) {
+		while ((remains = start + delay - SDL_GetPerformanceCounter()) < (uint64_t)(0.9*(double)UINT64_MAX)) {
 			if (remains > SDL_GetPerformanceFrequency()/1000)
 				SDL_Delay(1);
 		}

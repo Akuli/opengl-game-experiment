@@ -5,8 +5,8 @@ CFLAGS += -Werror=implicit-function-declaration
 CFLAGS += -Werror=discarded-qualifiers
 CFLAGS += -Werror=stack-usage=60000
 CFLAGS += -DSDL_ASSERT_LEVEL=2              # enable SDL_assert()
-#CFLAGS += -Ofast -fno-finite-math-only  # https://stackoverflow.com/q/47703436
-CFLAGS += -g
+CFLAGS += -Ofast -fno-finite-math-only  # https://stackoverflow.com/q/47703436
+#CFLAGS += -g
 CFLAGS += -MMD
 LDFLAGS += -lm -lSDL2
 

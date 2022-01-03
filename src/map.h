@@ -18,6 +18,7 @@ struct Section {
 	struct GaussianCurveMountain mountains[16];
 };
 
+float map_getheight(const struct Section *sect, float x, float z);
 void map_drawgrid(const struct Section *sect, const struct Camera *cam);
 
 
