@@ -11,7 +11,8 @@ float map_getheight(const struct Section *sect, float x, float z)
 	for (int i = 0; i < sizeof(sect->mountains)/sizeof(sect->mountains[0]); i++) {
 		float dx = x - sect->mountains[i].centerx;
 		float dz = z - sect->mountains[i].centerz;
-		y += sect->mountains[i].yscale * expf(-sect->mountains[i].xzscale * (dx*dx + dz*dz));
+		float xzscale = sect->mountains[i].xzscale;
+		y += sect->mountains[i].yscale * expf(-1/(xzscale*xzscale) * (dx*dx + dz*dz));
 	}
 	return y;
 }

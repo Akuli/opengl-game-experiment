@@ -7,7 +7,7 @@
 
 struct GaussianCurveMountain {
 	/*
-	y = yscale*e^(-xzscale*((x - centerx)^2 + (z - centerz)^2))
+	y = yscale*e^(-(((x - centerx) / xzscale)^2 + ((z - centerz) / xzscale)^2))
 	yscale can be negative, xzscale can't, center must be within map
 	*/
 	float xzscale, yscale, centerx, centerz;
