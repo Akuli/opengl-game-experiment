@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdint.h>
+#include <time.h>
 #include "map.h"
 #include "camera.h"
 #include "linalg.h"
@@ -10,14 +11,10 @@
 
 int main(void)
 {
-	struct Section sect = {
-		.mountains = {
-			// xzscale, yscale, centerx, centerz
-			{ 1, 1, 1, -3 },
-		},
-		.startx = 0,
-		.startz = -10,
-	};
+	srand(time(NULL));
+
+	struct Section sect = { .startx = 0, .startz = -10 };
+	map_generate(&sect);
 
 	SDL_Window *wnd = SDL_CreateWindow("title", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, CAMERA_SCREEN_WIDTH, CAMERA_SCREEN_HEIGHT, 0);
 	SDL_assert(wnd);
@@ -28,7 +25,7 @@ int main(void)
 		.screencentery = CAMERA_SCREEN_HEIGHT/2,
 		.world2cam.rows = {{1,0,0},{0,1,0},{0,0,1}},
 		.cam2world.rows = {{1,0,0},{0,1,0},{0,0,1}},
-		.location = {0,1,0},
+		.location = {0,map_getheight(&sect, 0, 0) + 1,0},
 	};
 
 	int zdir = 0, angledir = 0;
