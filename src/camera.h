@@ -17,6 +17,7 @@ with camera being wherever it is pointing to wherever it points to are "world
 coordinates". Both coordinate systems are right-handed with y axis pointing up.
 */
 struct Camera {
+	Vec3 location;
 	SDL_Surface *surface;
 	float screencentery;  // e.g. surface->h/2
 	Mat3 world2cam, cam2world;  // If you set one, please also set the other
@@ -43,11 +44,11 @@ there may be good reasons to not use these functions.
 */
 inline Vec3 camera_point_world2cam(const struct Camera *cam, Vec3 v)
 {
-	return mat3_mul_vec3(cam->world2cam, v);
+	return mat3_mul_vec3(cam->world2cam, vec3_sub(v, cam->location));
 }
 inline Vec3 camera_point_cam2world(const struct Camera *cam, Vec3 v)
 {
-	return mat3_mul_vec3(cam->cam2world, v);
+	return vec3_add(mat3_mul_vec3(cam->cam2world, v), cam->location);
 }
 
 /*

@@ -5,7 +5,8 @@ extern inline Vec3 vec3_add(Vec3 a, Vec3 b);
 extern inline Vec3 vec3_sub(Vec3 a, Vec3 b);
 extern inline float vec3_dot(Vec3 a, Vec3 b);
 extern inline float mat3_det(Mat3 M);
-inline Vec3 mat3_mul_vec3(Mat3 M, Vec3 v);
+extern inline Vec3 mat3_mul_vec3(Mat3 M, Vec3 v);
+extern inline bool plane_whichside(const struct Plane pl, Vec3 v);
 
 Mat3 mat3_rotation_xz(float angle)
 {
@@ -70,4 +71,9 @@ void plane_apply_mat3_INVERSE(struct Plane *pl, Mat3 inverse)
 	*/
 	transpose(&inverse);
 	pl->normal = mat3_mul_vec3(inverse, pl->normal);
+}
+
+void plane_move(struct Plane *pl, Vec3 mv)
+{
+	pl->constant += vec3_dot(pl->normal, mv);
 }

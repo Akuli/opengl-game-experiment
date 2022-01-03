@@ -49,8 +49,9 @@ struct Plane {
 	float constant;
 };
 
-// Apply the inverse of the given matrix to every point of the plane
+// Transform each point of the plane, resulting in a new plane
 void plane_apply_mat3_INVERSE(struct Plane *pl, Mat3 inverse);
+void plane_move(struct Plane *pl, Vec3 mv);
 
 inline bool plane_whichside(const struct Plane pl, Vec3 v)
 {
