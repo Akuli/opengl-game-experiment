@@ -110,7 +110,7 @@ int main(void)
 		percentsum += (SDL_GetPerformanceCounter() - start) / (double)delay;
 		percentcount++;
 		if (percentcount == CAMERA_FPS) {
-			log_printf("speed percentage average: %.2f", percentsum/percentcount*100);
+			log_printf("perf average: %.2f%%", percentsum/percentcount*100);
 			percentsum = 0;
 			percentcount = 0;
 		}
