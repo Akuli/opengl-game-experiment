@@ -26,7 +26,7 @@ static void generate_section(struct Section *sect, int startx, int startz)
 
 	// wide and deep/tall
 	for (i = 0; i < n/20; i++) {
-		float h = 1.0f - expf(uniform_random_float(-10, 2));
+		float h = tanf(uniform_random_float(-1.4f, 1.4f));
 		float w = uniform_random_float(fabsf(h), 3*fabsf(h));
 		sect->mountains[i] = (struct GaussianCurveMountain){
 			.xzscale = w,
