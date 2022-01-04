@@ -329,6 +329,7 @@ void map_drawgrid(struct Map *map, const struct Camera *cam)
 
 static int section_preparing_thread(void *queueptr)
 {
+	SDL_SetThreadPriority(SDL_THREAD_PRIORITY_LOW);
 	struct SectionQueue *queue = queueptr;
 
 	struct Section *tmp = malloc(sizeof(*tmp));
