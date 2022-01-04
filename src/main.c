@@ -18,12 +18,12 @@ int main(void)
 
 	uint64_t delay = SDL_GetPerformanceFrequency() / CAMERA_FPS;
 
-	static struct Map map = {0};
+	struct Map *map = map_new();
 	struct Camera cam = {
 		.screencentery = CAMERA_SCREEN_HEIGHT/2,
 		.world2cam.rows = {{1,0,0},{0,1,0},{0,0,1}},
 		.cam2world.rows = {{1,0,0},{0,1,0},{0,0,1}},
-		.location = {1, map_getheight(&map, 1, 1) + 1, 1},
+		.location = {1, map_getheight(map, 1, 1) + 1, 1},
 	};
 
 	int zdir = 0, angledir = 0;
@@ -38,8 +38,8 @@ int main(void)
 		SDL_Event e;
 		while (SDL_PollEvent(&e)) switch(e.type) {
 		case SDL_QUIT:
+			map_destroy(map);
 			SDL_DestroyWindow(wnd);
-			map_freebuffers(&map);
 			return 0;
 
 		case SDL_KEYDOWN:
@@ -90,7 +90,7 @@ int main(void)
 
 		if (zdir != 0) {
 			vec3_add_inplace(&cam.location, mat3_mul_vec3(cam.cam2world, (Vec3){ 0, 0, zdir*MOVING_SPEED/CAMERA_FPS }));
-			cam.location.y = map_getheight(&map, cam.location.x, cam.location.z) + 1;
+			cam.location.y = map_getheight(map, cam.location.x, cam.location.z) + 1;
 		}
 
 		if (angledir != 0) {
@@ -104,11 +104,9 @@ int main(void)
 		if (cam.surface) {
 			camera_update_visplanes(&cam);
 			SDL_FillRect(cam.surface, NULL, 0);
-			map_drawgrid(&map, &cam);
+			map_drawgrid(map, &cam);
 			SDL_UpdateWindowSurface(wnd);
 		}
-
-		map_prepare_section(&map);
 
 		double percent = (SDL_GetPerformanceCounter() - start) / (double)delay;
 		if (percent > 1)

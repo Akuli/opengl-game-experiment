@@ -22,11 +22,24 @@ struct Section {
 	/*
 	Cached values for height of map, depends on heights of this and neighbor sections
 	Raw version does not take in account neighbours and is always ready.
-	This way, sections can be generated beforehand and added to the map quickly as needed.
 	*/
 	float ytableraw[3*SECTION_SIZE*YTABLE_ITEMS_PER_UNIT + 1][3*SECTION_SIZE*YTABLE_ITEMS_PER_UNIT + 1];
 	float ytable[SECTION_SIZE*YTABLE_ITEMS_PER_UNIT + 1][SECTION_SIZE*YTABLE_ITEMS_PER_UNIT + 1];
 	bool ytableready;
+};
+
+/*
+You typically need many new sections at once, because neighbor sections affect the section
+that needs to be added. If there's nothing in queue, that's slow.
+
+To provide many sections quickly, there's a separate thread that generates them in the
+background. After generating, a section can be added anywhere on the map.
+*/
+struct SectionQueue {
+	struct Section sects[15];
+	int len;
+	SDL_mutex *lock;  // hold this while adding/removing/checking sections
+	bool quit;
 };
 
 struct Map {
@@ -36,22 +49,15 @@ struct Map {
 	int *itable;  // Hash table of indexes into sections array
 	unsigned sectsalloced;  // space allocated in itable and sections
 
-	// queue of sections to add to map later, when they are needed
-	struct Section queue[15];
-	int queuelen;
+	struct SectionQueue queue;
+	SDL_Thread *sectthread;
 };
+
+struct Map *map_new(void);
+void map_destroy(struct Map *map);
 
 float map_getheight(struct Map *map, float x, float z);
 void map_drawgrid(struct Map *map, const struct Camera *cam);
-
-/*
-Run this when idle, if needed generates one section and adds this to queue.
-You typically need many new sections at once, because neighbor sections affect the section
-that needs to be added. If there's nothing in queue, that's slow.
-*/
-void map_prepare_section(struct Map *map);
-
-void map_freebuffers(const struct Map *map);
 
 
 #endif

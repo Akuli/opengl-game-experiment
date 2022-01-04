@@ -60,29 +60,19 @@ static void generate_section(struct Section *sect)
 	for (int xidx = 0; xidx <= 3*SECTION_SIZE*YTABLE_ITEMS_PER_UNIT; xidx++) {
 		for (int zidx = 0; zidx <= 3*SECTION_SIZE*YTABLE_ITEMS_PER_UNIT; zidx++) {
 			float gap = 1.0f / YTABLE_ITEMS_PER_UNIT;
-			float x = sect->startx + xidx*gap - SECTION_SIZE;
-			float z = sect->startz + zidx*gap - SECTION_SIZE;
+			float x = xidx*gap - SECTION_SIZE;
+			float z = zidx*gap - SECTION_SIZE;
 
 			float y = 0;
 			for (int i = 0; i < sizeof(sect->mountains) / sizeof(sect->mountains[0]); i++) {
-				float dx = x - sect->startx - sect->mountains[i].centerx;
-				float dz = z - sect->startz - sect->mountains[i].centerz;
+				float dx = x - sect->mountains[i].centerx;
+				float dz = z - sect->mountains[i].centerz;
 				float xzscale = sect->mountains[i].xzscale;
 				y += sect->mountains[i].yscale * expf(-1/(xzscale*xzscale) * (dx*dx + dz*dz));
 			}
 			sect->ytableraw[xidx][zidx] = y;
 		}
 	}
-}
-
-void map_prepare_section(struct Map *map)
-{
-	if (map->queuelen == sizeof(map->queue)/sizeof(map->queue[0]))
-		return;
-
-	log_printf("queue has %d sections, generating one more", map->queuelen);
-	struct Section *ptr = &map->queue[map->queuelen++];
-	generate_section(ptr);
 }
 
 static unsigned section_hash(int startx, int startz)
@@ -155,13 +145,26 @@ static struct Section *find_or_add_section(struct Map *map, int startx, int star
 
 	struct Section *res = find_section(map, startx, startz);
 	if (!res) {
-		log_printf("there are %d sections (%d in queue), adding one more to startx=%d startz=%d",
-			map->nsections, map->queuelen, startx, startz);
-		if (map->queuelen == 0)
-			map_prepare_section(map);
-
 		res = &map->sections[map->nsections];
-		*res = map->queue[--map->queuelen];
+
+		// Wait until there is an item in the queue
+		while(1) {
+			int ret = SDL_LockMutex(map->queue.lock);
+			SDL_assert(ret == 0);
+
+			bool empty = (map->queue.len == 0);
+			if (!empty)
+				*res = map->queue.sects[--map->queue.len];
+
+			ret = SDL_UnlockMutex(map->queue.lock);
+			SDL_assert(ret == 0);
+
+			if (empty)
+				SDL_Delay(1);
+			else
+				break;
+		}
+
 		res->startx = startx;
 		res->startz = startz;
 		add_section_to_itable(map, map->nsections);
@@ -187,7 +190,6 @@ static void ensure_ytable_is_ready(struct Map *map, struct Section *sect)
 		find_or_add_section(map, sect->startx + SECTION_SIZE, sect->startz + SECTION_SIZE),
 	};
 
-	uint64_t a = SDL_GetPerformanceCounter();
 	for (int xidx = 0; xidx <= SECTION_SIZE*YTABLE_ITEMS_PER_UNIT; xidx++) {
 		for (int zidx = 0; zidx <= SECTION_SIZE*YTABLE_ITEMS_PER_UNIT; zidx++) {
 			float y = 0;
@@ -201,8 +203,6 @@ static void ensure_ytable_is_ready(struct Map *map, struct Section *sect)
 			sect->ytable[xidx][zidx] = y;
 		}
 	}
-	uint64_t b = SDL_GetPerformanceCounter();
-	log_printf("computed ytable %d", (int)(b-a));
 
 	sect->ytableready = true;
 }
@@ -277,8 +277,59 @@ void map_drawgrid(struct Map *map, const struct Camera *cam)
 	}
 }
 
-void map_freebuffers(const struct Map *map)
+static int section_preparing_thread(void *queueptr)
 {
+	struct SectionQueue *queue = queueptr;
+
+	struct Section *tmp = malloc(sizeof(*tmp));
+	SDL_assert(tmp);
+
+	while (!queue->quit) {
+		int ret = SDL_LockMutex(queue->lock);
+		SDL_assert(ret == 0);
+		bool full = queue->len == sizeof(queue->sects)/sizeof(queue->sects[0]);
+		ret = SDL_UnlockMutex(queue->lock);
+		SDL_assert(ret == 0);
+
+		if (full) {
+			SDL_Delay(10);
+			continue;
+		}
+
+		generate_section(tmp);  // slow
+		log_printf("generated a section, adding to queue");
+
+		ret = SDL_LockMutex(queue->lock);
+		SDL_assert(ret == 0);
+		queue->sects[queue->len++] = *tmp;
+		ret = SDL_UnlockMutex(queue->lock);
+		SDL_assert(ret == 0);
+	}
+
+	free(tmp);
+	return 1234;  // ignored
+}
+
+struct Map *map_new(void)
+{
+	struct Map *map = malloc(sizeof(*map));
+	SDL_assert(map);
+	memset(map, 0, sizeof *map);
+
+	map->queue.lock = SDL_CreateMutex();
+	SDL_assert(map->queue.lock);
+
+	map->sectthread = SDL_CreateThread(section_preparing_thread, "NameOfTheMapSectionGeneratorThread", &map->queue);
+	SDL_assert(map->sectthread);
+
+	return map;
+}
+
+void map_destroy(struct Map *map)
+{
+	map->queue.quit = true;
+	SDL_WaitThread(map->sectthread, NULL);
 	free(map->itable);
 	free(map->sections);
+	free(map);
 }
