@@ -127,8 +127,30 @@ static void generate_section(struct Section *sect)
 
 static unsigned section_hash(int startx, int startz)
 {
-	return (unsigned)(startx / SECTION_SIZE * 17) ^ (unsigned)(startz / SECTION_SIZE * 29);
+	unsigned x = (unsigned)(startx / SECTION_SIZE);
+	unsigned z = (unsigned)(startz / SECTION_SIZE);
+
+	// both magic numbers are primes, seems to work best
+	return (x*7907u) ^ (z*4391u);
 }
+
+// For checking whether hash function is working well
+#if 0
+static void print_collision_percentage(const struct Map *map)
+{
+	int colls = 0, taken = 0;
+	for (unsigned h = 0; h < map->sectsalloced; h++) {
+		if (map->itable[h] == -1)
+			continue;
+		taken++;
+		if (section_hash(map->sections[map->itable[h]].startx, map->sections[map->itable[h]].startz) % map->sectsalloced != h)
+			colls++;
+	}
+	if (taken != 0)
+		log_printf("itable: %d%% full, %d%% of filled slots are collisions",
+			taken*100/map->sectsalloced, colls*100/taken);
+}
+#endif
 
 static struct Section *find_section(const struct Map *map, int startx, int startz)
 {
@@ -166,26 +188,17 @@ static void grow_section_arrays(struct Map *map)
 			h = (h+1) % map->sectsalloced;
 		map->itable[h] = i;
 	}
-
 }
 
 static void add_section_to_itable(struct Map *map, int sectidx)
 {
 	int startx = map->sections[sectidx].startx;
 	int startz = map->sections[sectidx].startz;
+
 	unsigned h = section_hash(startx, startz) % map->sectsalloced;
 	while (map->itable[h] != -1)
 		h = (h+1) % map->sectsalloced;
 	map->itable[h] = sectidx;
-
-	// For checking whether hash function is working well
-	/*
-	char s[2000] = {0};
-	SDL_assert(map->sectsalloced < sizeof s);
-	for (unsigned h = 0; h < map->sectsalloced; h++)
-		s[h] = map->itable[h]==-1 ? ' ' : 'x';
-	log_printf("|%s|", s);
-	*/
 }
 
 static struct Section *find_or_add_section(struct Map *map, int startx, int startz)
@@ -304,7 +317,7 @@ void map_drawgrid(struct Map *map, const struct Camera *cam)
 	int startzmax = get_section_start_coordinate(cam->location.z + r);
 
 	// In x and z directions, need +2 (one extra in each direction) and +1 (both ends are inclusive)
-	make_room_for_more_sections(map, (startxmax - startxmin + 3)*(startzmax - startzmin + 3));
+	make_room_for_more_sections(map, ((startxmax - startxmin)/SECTION_SIZE + 3)*((startzmax - startzmin)/SECTION_SIZE + 3));
 
 	for (int startx = startxmin; startx <= startxmax; startx += SECTION_SIZE) {
 		for (int startz = startzmin; startz <= startzmax; startz += SECTION_SIZE) {
@@ -338,17 +351,18 @@ static int section_preparing_thread(void *queueptr)
 	while (!queue->quit) {
 		int ret = SDL_LockMutex(queue->lock);
 		SDL_assert(ret == 0);
-		bool full = queue->len == sizeof(queue->sects)/sizeof(queue->sects[0]);
+		int len = queue->len;
 		ret = SDL_UnlockMutex(queue->lock);
 		SDL_assert(ret == 0);
 
-		if (full) {
+		int maxlen = sizeof(queue->sects)/sizeof(queue->sects[0]);
+		if (len == maxlen) {
 			SDL_Delay(10);
 			continue;
 		}
 
+		log_printf("There is room in section queue (%d/%d), generating a new section", len, maxlen);
 		generate_section(tmp);  // slow
-		log_printf("generated a section, adding to queue");
 
 		ret = SDL_LockMutex(queue->lock);
 		SDL_assert(ret == 0);
