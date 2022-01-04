@@ -3,6 +3,56 @@
 #include "log.h"
 #include <math.h>
 
+struct GaussianCurveMountain {
+	/*
+	y = yscale*e^(-(((x - centerx) / xzscale)^2 + ((z - centerz) / xzscale)^2))
+	yscale can be negative, xzscale can't, center must be within map
+	center coords are relative to section start, so that sections are easy to move
+	*/
+	float xzscale, yscale, centerx, centerz;
+};
+
+#define SECTION_SIZE 8  // side length of section square on xz plane
+#define YTABLE_ITEMS_PER_UNIT 5  // how frequently to cache computed heights
+
+struct Section {
+	int startx, startz;
+	struct GaussianCurveMountain mountains[100];
+
+	/*
+	Cached values for height of map, depends on heights of this and neighbor sections
+	Raw version does not take in account neighbours and is always ready.
+	*/
+	float ytableraw[3*SECTION_SIZE*YTABLE_ITEMS_PER_UNIT + 1][3*SECTION_SIZE*YTABLE_ITEMS_PER_UNIT + 1];
+	float ytable[SECTION_SIZE*YTABLE_ITEMS_PER_UNIT + 1][SECTION_SIZE*YTABLE_ITEMS_PER_UNIT + 1];
+	bool ytableready;
+};
+
+/*
+You typically need many new sections at once, because neighbor sections affect the section
+that needs to be added. If there's nothing in queue, that's slow.
+
+To provide many sections quickly, there's a separate thread that generates them in the
+background. After generating, a section can be added anywhere on the map.
+*/
+struct SectionQueue {
+	struct Section sects[15];
+	int len;
+	SDL_mutex *lock;  // hold this while adding/removing/checking sections
+	bool quit;
+};
+
+struct Map {
+	struct Section *sections;
+	int nsections;
+
+	int *itable;  // Hash table of indexes into sections array
+	unsigned sectsalloced;  // space allocated in itable and sections
+
+	struct SectionQueue queue;
+	SDL_Thread *sectthread;
+};
+
 #define min(x, y) ((x)<(y) ? (x) : (y))
 #define min4(a,b,c,d) min(min(a,b),min(c,d))
 
@@ -244,14 +294,14 @@ float map_getheight(struct Map *map, float x, float z)
 		+ t*u*sect->ytable[ix+1][iz+1];
 }
 
-#define RADIUS 10
-
 void map_drawgrid(struct Map *map, const struct Camera *cam)
 {
-	int startxmin = get_section_start_coordinate(cam->location.x - RADIUS);
-	int startxmax = get_section_start_coordinate(cam->location.x + RADIUS);
-	int startzmin = get_section_start_coordinate(cam->location.z - RADIUS);
-	int startzmax = get_section_start_coordinate(cam->location.z + RADIUS);
+	float r = 10;
+
+	int startxmin = get_section_start_coordinate(cam->location.x - r);
+	int startxmax = get_section_start_coordinate(cam->location.x + r);
+	int startzmin = get_section_start_coordinate(cam->location.z - r);
+	int startzmax = get_section_start_coordinate(cam->location.z + r);
 
 	// In x and z directions, need +2 (one extra in each direction) and +1 (both ends are inclusive)
 	make_room_for_more_sections(map, (startxmax - startxmin + 3)*(startzmax - startzmin + 3));
@@ -267,9 +317,9 @@ void map_drawgrid(struct Map *map, const struct Camera *cam)
 					float z = sect->startz + gap*iz;
 					float dx = x - cam->location.x;
 					float dz = z - cam->location.z;
-					if (dx*dx + dz*dz < RADIUS*RADIUS && (dx+gap)*(dx+gap) + dz*dz < RADIUS*RADIUS)
+					if (dx*dx + dz*dz < r*r && (dx+gap)*(dx+gap) + dz*dz < r*r)
 						camera_drawline(cam, (Vec3){x,sect->ytable[ix][iz],z}, (Vec3){x+gap,sect->ytable[ix+1][iz],z});
-					if (dx*dx + dz*dz < RADIUS*RADIUS && dx*dx + (dz+gap)*(dz+gap) < RADIUS*RADIUS)
+					if (dx*dx + dz*dz < r*r && dx*dx + (dz+gap)*(dz+gap) < r*r)
 						camera_drawline(cam, (Vec3){x,sect->ytable[ix][iz],z}, (Vec3){x,sect->ytable[ix][iz+1],z+gap});
 				}
 			}
