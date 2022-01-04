@@ -108,7 +108,11 @@ int main(void)
 			SDL_UpdateWindowSurface(wnd);
 		}
 
-		percentsum += (SDL_GetPerformanceCounter() - start) / (double)delay;
+		double percent = (SDL_GetPerformanceCounter() - start) / (double)delay;
+		if (percent > 1)
+			log_printf("event loop is lagging: %.2f%%", percent*100);
+
+		percentsum += percent;
 		percentcount++;
 		if (percentcount == CAMERA_FPS) {
 			log_printf("perf average: %.2f%%", percentsum/percentcount*100);
