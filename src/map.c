@@ -3,58 +3,34 @@
 #include "log.h"
 #include <math.h>
 
-struct GaussianCurveMountain {
-	/*
-	y = yscale*e^(-(((x - centerx) / xzscale)^2 + ((z - centerz) / xzscale)^2))
-	yscale can be negative, xzscale can't, center must be within map
-	center coords are relative to section start, so that sections are easy to move
-	*/
-	float xzscale, yscale, centerx, centerz;
-};
+#define min(x, y) ((x)<(y) ? (x) : (y))
+#define min4(a,b,c,d) min(min(a,b),min(c,d))
 
 #define SECTION_SIZE 8  // side length of section square on xz plane
 #define YTABLE_ITEMS_PER_UNIT 5  // how frequently to cache computed heights
 
 struct Section {
 	int startx, startz;
-	struct GaussianCurveMountain mountains[100];
 
 	/*
-	Cached values for height of map, depends on heights of this and neighbor sections
-	Raw version does not take in account neighbours and is always ready.
+	y = yscale*e^(-(((x - centerx) / xzscale)^2 + ((z - centerz) / xzscale)^2))
+	yscale can be negative, xzscale can't, center must be within map
+	center coords are relative to section start, so that sections are easy to move
+	*/
+	struct GaussianCurveMountain { float xzscale,yscale,centerx,centerz; } mountains[100];
+
+	/*
+	ytable contains cached values for height of map, depending also on neighbor sections.
+	Raw version:
+		- contains enough values to cover neighbors too
+		- does not take in account neighbors
+		- is slow to compute
+		- is always ready to be used, even when ytableready is false
 	*/
 	float ytableraw[3*SECTION_SIZE*YTABLE_ITEMS_PER_UNIT + 1][3*SECTION_SIZE*YTABLE_ITEMS_PER_UNIT + 1];
 	float ytable[SECTION_SIZE*YTABLE_ITEMS_PER_UNIT + 1][SECTION_SIZE*YTABLE_ITEMS_PER_UNIT + 1];
 	bool ytableready;
 };
-
-/*
-You typically need many new sections at once, because neighbor sections affect the section
-that needs to be added. If there's nothing in queue, that's slow.
-
-To provide many sections quickly, there's a separate thread that generates them in the
-background. After generating, a section can be added anywhere on the map.
-*/
-struct SectionQueue {
-	struct Section sects[20];  // should have about 4x the room it typically needs, because corner cases
-	int len;
-	SDL_mutex *lock;  // hold this while adding/removing/checking sections
-	bool quit;
-};
-
-struct Map {
-	struct Section *sections;
-	int nsections;
-
-	int *itable;  // Hash table of indexes into sections array
-	unsigned sectsalloced;  // space allocated in itable and sections
-
-	struct SectionQueue queue;
-	SDL_Thread *sectthread;
-};
-
-#define min(x, y) ((x)<(y) ? (x) : (y))
-#define min4(a,b,c,d) min(min(a,b),min(c,d))
 
 static float uniform_random_float(float min, float max)
 {
@@ -107,6 +83,7 @@ static void generate_section(struct Section *sect)
 		sect->mountains[i].xzscale = min(sect->mountains[i].xzscale, mindist/2.5f);
 	}
 
+	// This loop is too slow to run within a single frame
 	for (int xidx = 0; xidx <= 3*SECTION_SIZE*YTABLE_ITEMS_PER_UNIT; xidx++) {
 		for (int zidx = 0; zidx <= 3*SECTION_SIZE*YTABLE_ITEMS_PER_UNIT; zidx++) {
 			float gap = 1.0f / YTABLE_ITEMS_PER_UNIT;
@@ -125,12 +102,69 @@ static void generate_section(struct Section *sect)
 	}
 }
 
+/*
+You typically need many new sections at once, because neighbor sections affect the section
+that needs to be added. There's a separate thread that generates them in the
+background. After generating, a section can be added anywhere on the map.
+*/
+struct SectionQueue {
+	struct Section sects[20];  // should have about 4x the room it typically needs, because corner cases
+	int len;
+	SDL_mutex *lock;  // hold this while adding/removing/checking sects or len
+	bool quit;
+};
+
+static int section_preparing_thread(void *queueptr)
+{
+	SDL_SetThreadPriority(SDL_THREAD_PRIORITY_LOW);
+	struct SectionQueue *queue = queueptr;
+
+	struct Section *tmp = malloc(sizeof(*tmp));
+	SDL_assert(tmp);
+
+	while (!queue->quit) {
+		int ret = SDL_LockMutex(queue->lock);
+		SDL_assert(ret == 0);
+		int len = queue->len;
+		ret = SDL_UnlockMutex(queue->lock);
+		SDL_assert(ret == 0);
+
+		int maxlen = sizeof(queue->sects)/sizeof(queue->sects[0]);
+		if (len == maxlen) {
+			SDL_Delay(10);
+			continue;
+		}
+
+		log_printf("There is room in section queue (%d/%d), generating a new section", len, maxlen);
+		generate_section(tmp);  // slow
+
+		ret = SDL_LockMutex(queue->lock);
+		SDL_assert(ret == 0);
+		queue->sects[queue->len++] = *tmp;
+		ret = SDL_UnlockMutex(queue->lock);
+		SDL_assert(ret == 0);
+	}
+
+	free(tmp);
+	return 1234;  // ignored
+}
+
+struct Map {
+	struct Section *sections;
+	int nsections;
+	int *itable;  // Hash table of indexes into sections array
+	unsigned sectsalloced;  // space allocated in itable and sections
+
+	struct SectionQueue queue;
+	SDL_Thread *prepthread;
+};
+
 static unsigned section_hash(int startx, int startz)
 {
 	unsigned x = (unsigned)(startx / SECTION_SIZE);
 	unsigned z = (unsigned)(startz / SECTION_SIZE);
 
-	// both magic numbers are primes, seems to work best
+	// both magic numbers are primes, to prevent patterns that place many numbers similarly
 	return (x*7907u) ^ (z*4391u);
 }
 
@@ -154,6 +188,9 @@ static void print_collision_percentage(const struct Map *map)
 
 static struct Section *find_section(const struct Map *map, int startx, int startz)
 {
+	SDL_assert(startx % SECTION_SIZE == 0);
+	SDL_assert(startz % SECTION_SIZE == 0);
+
 	if (map->sectsalloced == 0)
 		return NULL;
 
@@ -178,12 +215,21 @@ static void add_section_to_itable(struct Map *map, int sectidx)
 	map->itable[h] = sectidx;
 }
 
-static void grow_section_arrays(struct Map *map)
+static void make_room_for_more_sections(struct Map *map, unsigned howmanymore)
 {
+	// +1 to ensure there's empty slot in itable, so "while (itable[h] != -1)" loops will terminate
+	unsigned goal = map->nsections + howmanymore + 1;
+
+	// allocate more than necessary, to prevent collisions in hash table
+	goal = (unsigned)(1.4f * goal);  // TODO: choose a good magic number?
+
 	unsigned oldalloc = map->sectsalloced;
-	map->sectsalloced *= 2;
 	if (map->sectsalloced == 0)
-		map->sectsalloced = 16;  // chosen so that a few grows occur during startup (exposes bugs)
+		map->sectsalloced = 1;
+	while (map->sectsalloced < goal)
+		map->sectsalloced *= 2;
+	if (map->sectsalloced == oldalloc)
+		return;
 	log_printf("growing section arrays: %u --> %u", oldalloc, map->sectsalloced);
 
 	map->itable = realloc(map->itable, sizeof(map->itable[0])*map->sectsalloced);
@@ -198,9 +244,6 @@ static void grow_section_arrays(struct Map *map)
 
 static struct Section *find_or_add_section(struct Map *map, int startx, int startz)
 {
-	SDL_assert(startx % SECTION_SIZE == 0);
-	SDL_assert(startz % SECTION_SIZE == 0);
-
 	struct Section *res = find_section(map, startx, startz);
 	if (!res) {
 		res = &map->sections[map->nsections];
@@ -272,13 +315,6 @@ static int get_section_start_coordinate(float val)
 	return (int)floorf(val / SECTION_SIZE) * SECTION_SIZE;
 }
 
-static void make_room_for_more_sections(struct Map *map, int howmanymore)
-{
-	// +1 to ensure there's empty slot in itable, so "while (itable[h] != -1)" loops will terminate
-	while (map->nsections + howmanymore + 1 > map->sectsalloced*0.7f)  // TODO: choose good magic number?
-		grow_section_arrays(map);
-}
-
 float map_getheight(struct Map *map, float x, float z)
 {
 	// Allocate many sections beforehand, doing it later can mess up pointers into sections array
@@ -336,41 +372,6 @@ void map_drawgrid(struct Map *map, const struct Camera *cam)
 	}
 }
 
-static int section_preparing_thread(void *queueptr)
-{
-	SDL_SetThreadPriority(SDL_THREAD_PRIORITY_LOW);
-	struct SectionQueue *queue = queueptr;
-
-	struct Section *tmp = malloc(sizeof(*tmp));
-	SDL_assert(tmp);
-
-	while (!queue->quit) {
-		int ret = SDL_LockMutex(queue->lock);
-		SDL_assert(ret == 0);
-		int len = queue->len;
-		ret = SDL_UnlockMutex(queue->lock);
-		SDL_assert(ret == 0);
-
-		int maxlen = sizeof(queue->sects)/sizeof(queue->sects[0]);
-		if (len == maxlen) {
-			SDL_Delay(10);
-			continue;
-		}
-
-		log_printf("There is room in section queue (%d/%d), generating a new section", len, maxlen);
-		generate_section(tmp);  // slow
-
-		ret = SDL_LockMutex(queue->lock);
-		SDL_assert(ret == 0);
-		queue->sects[queue->len++] = *tmp;
-		ret = SDL_UnlockMutex(queue->lock);
-		SDL_assert(ret == 0);
-	}
-
-	free(tmp);
-	return 1234;  // ignored
-}
-
 struct Map *map_new(void)
 {
 	struct Map *map = malloc(sizeof(*map));
@@ -380,8 +381,8 @@ struct Map *map_new(void)
 	map->queue.lock = SDL_CreateMutex();
 	SDL_assert(map->queue.lock);
 
-	map->sectthread = SDL_CreateThread(section_preparing_thread, "NameOfTheMapSectionGeneratorThread", &map->queue);
-	SDL_assert(map->sectthread);
+	map->prepthread = SDL_CreateThread(section_preparing_thread, "NameOfTheMapSectionGeneratorThread", &map->queue);
+	SDL_assert(map->prepthread);
 
 	return map;
 }
@@ -389,7 +390,7 @@ struct Map *map_new(void)
 void map_destroy(struct Map *map)
 {
 	map->queue.quit = true;
-	SDL_WaitThread(map->sectthread, NULL);
+	SDL_WaitThread(map->prepthread, NULL);
 	free(map->itable);
 	free(map->sections);
 	free(map);
