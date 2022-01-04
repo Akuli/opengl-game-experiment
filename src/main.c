@@ -39,6 +39,7 @@ int main(void)
 		while (SDL_PollEvent(&e)) switch(e.type) {
 		case SDL_QUIT:
 			SDL_DestroyWindow(wnd);
+			map_freebuffers(&map);
 			return 0;
 
 		case SDL_KEYDOWN:

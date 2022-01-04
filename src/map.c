@@ -250,3 +250,9 @@ void map_drawgrid(struct Map *map, const struct Camera *cam)
 		}
 	}
 }
+
+void map_freebuffers(const struct Map *map)
+{
+	free(map->itable);
+	free(map->sections);
+}

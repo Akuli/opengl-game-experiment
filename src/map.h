@@ -34,5 +34,7 @@ struct Map {
 float map_getheight(struct Map *map, float x, float z);
 void map_drawgrid(struct Map *map, const struct Camera *cam);
 
+void map_freebuffers(const struct Map *map);
+
 
 #endif
