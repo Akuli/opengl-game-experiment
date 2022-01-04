@@ -167,6 +167,17 @@ static struct Section *find_section(const struct Map *map, int startx, int start
 	return NULL;
 }
 
+static void add_section_to_itable(struct Map *map, int sectidx)
+{
+	int startx = map->sections[sectidx].startx;
+	int startz = map->sections[sectidx].startz;
+
+	unsigned h = section_hash(startx, startz) % map->sectsalloced;
+	while (map->itable[h] != -1)
+		h = (h+1) % map->sectsalloced;
+	map->itable[h] = sectidx;
+}
+
 static void grow_section_arrays(struct Map *map)
 {
 	unsigned oldalloc = map->sectsalloced;
@@ -181,24 +192,8 @@ static void grow_section_arrays(struct Map *map)
 
 	for (int h = 0; h < map->sectsalloced; h++)
 		map->itable[h] = -1;
-
-	for (int i = 0; i < map->nsections; i++) {
-		unsigned h = section_hash(map->sections[i].startx, map->sections[i].startz) % map->sectsalloced;
-		while (map->itable[h] != -1)
-			h = (h+1) % map->sectsalloced;
-		map->itable[h] = i;
-	}
-}
-
-static void add_section_to_itable(struct Map *map, int sectidx)
-{
-	int startx = map->sections[sectidx].startx;
-	int startz = map->sections[sectidx].startz;
-
-	unsigned h = section_hash(startx, startz) % map->sectsalloced;
-	while (map->itable[h] != -1)
-		h = (h+1) % map->sectsalloced;
-	map->itable[h] = sectidx;
+	for (int i = 0; i < map->nsections; i++)
+		add_section_to_itable(map, i);
 }
 
 static struct Section *find_or_add_section(struct Map *map, int startx, int startz)
