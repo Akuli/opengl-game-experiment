@@ -31,6 +31,7 @@ int main(void)
 
 	double percentsum = 0;
 	int percentcount = 0;
+	bool boost = false;
 
 	while(1) {
 		uint64_t start = SDL_GetPerformanceCounter();
@@ -56,6 +57,9 @@ int main(void)
 			case SDL_SCANCODE_D:
 				angledir = 1;
 				break;
+			case SDL_SCANCODE_SPACE:
+				boost = true;
+				break;
 			default:
 				break;
 			}
@@ -79,6 +83,9 @@ int main(void)
 				if (angledir == 1)
 					angledir = 0;
 				break;
+			case SDL_SCANCODE_SPACE:
+				boost = false;
+				break;
 			default:
 				break;
 			}
@@ -89,7 +96,7 @@ int main(void)
 		}
 
 		if (zdir != 0) {
-			vec3_add_inplace(&cam.location, mat3_mul_vec3(cam.cam2world, (Vec3){ 0, 0, zdir*MOVING_SPEED/CAMERA_FPS }));
+			vec3_add_inplace(&cam.location, mat3_mul_vec3(cam.cam2world, (Vec3){ 0, 0, zdir*MOVING_SPEED*(1+15*boost)/CAMERA_FPS }));
 			cam.location.y = map_getheight(map, cam.location.x, cam.location.z) + 1;
 		}
 
