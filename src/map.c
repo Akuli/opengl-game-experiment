@@ -132,10 +132,6 @@ static struct Section *find_or_add_section(struct Map *map, int startx, int star
 {
 	struct Section *res = find_section(map, startx, startz);
 	if (!res) {
-		// Make sure there's always 1 empty slot, makes searches easier
-		if (map->nsections+2 >= map->sectsalloced*0.7f)  // TODO: choose good magic number
-			grow_section_arrays(map);
-
 		log_printf("there are %d sections, adding one more to startx=%d startz=%d",
 			map->nsections, startx, startz);
 		res = &map->sections[map->nsections];
@@ -185,23 +181,26 @@ static void ensure_ytable_is_ready(struct Map *map, struct Section *sect)
 	sect->ytableready = true;
 }
 
+// round down to multiple of SECTION_SIZE
+static int get_section_start_coordinate(float val)
+{
+	return (int)floorf(val / SECTION_SIZE) * SECTION_SIZE;
+}
+
+static void make_room_for_more_sections(struct Map *map, int howmanymore)
+{
+	// +1 to ensure there's empty slot in itable, so "while (itable[h] != -1)" loops will terminate
+	while (map->nsections + howmanymore + 1 > map->sectsalloced*0.7f)  // TODO: choose good magic number?
+		grow_section_arrays(map);
+}
+
 float map_getheight(struct Map *map, float x, float z)
 {
-	// coords of middle section
-	int mx = (int)floorf(x / SECTION_SIZE) * SECTION_SIZE;
-	int mz = (int)floorf(z / SECTION_SIZE) * SECTION_SIZE;
+	// Allocate many sections beforehand, doing it later can mess up pointers into sections array
+	// One section is not enough, need to include its 8 neighbors too
+	make_room_for_more_sections(map, 9);
 
-	/*
-	Allocate many sections now, doing it later can mess up pointers into sections array
-	We need, at worst:
-		1		new section
-		+ 8		neighbor sections
-		+ 1		empty slot in itable to ensure "while (itable[h] != -1)" loops will terminate
-	*/
-	while (map->nsections+1+8+1 > map->sectsalloced*0.7f)  // TODO: choose good magic number?
-		grow_section_arrays(map);
-
-	struct Section *sect = find_or_add_section(map, mx, mz);
+	struct Section *sect = find_or_add_section(map, get_section_start_coordinate(x), get_section_start_coordinate(z));
 	ensure_ytable_is_ready(map, sect);
 
 	float ixfloat = (x - sect->startx)*YTABLE_ITEMS_PER_UNIT;
@@ -219,44 +218,35 @@ float map_getheight(struct Map *map, float x, float z)
 		+ t*u*sect->ytable[ix+1][iz+1];
 }
 
-#define GRID_LINES_PER_UNIT 5
 #define RADIUS 10
 
 void map_drawgrid(struct Map *map, const struct Camera *cam)
 {
-	float spacing = 1.0f / GRID_LINES_PER_UNIT;
+	int startxmin = get_section_start_coordinate(cam->location.x - RADIUS);
+	int startxmax = get_section_start_coordinate(cam->location.x + RADIUS);
+	int startzmin = get_section_start_coordinate(cam->location.z - RADIUS);
+	int startzmax = get_section_start_coordinate(cam->location.z + RADIUS);
 
-	static float heights[2*RADIUS*GRID_LINES_PER_UNIT + 1][2*RADIUS*GRID_LINES_PER_UNIT + 1];
+	// In x and z directions, need +2 (one extra in each direction) and +1 (both ends are inclusive)
+	make_room_for_more_sections(map, (startxmax - startxmin + 3)*(startzmax - startzmin + 3));
 
-	// Middle element of heights goes to this location
-	float midx = roundf(cam->location.x / spacing) * spacing;
-	float midz = roundf(cam->location.z / spacing) * spacing;
-
-	for (int xidx = 0; xidx <= 2*RADIUS*GRID_LINES_PER_UNIT; xidx++) {
-		for (int zidx = 0; zidx <= 2*RADIUS*GRID_LINES_PER_UNIT; zidx++) {
-			float x = midx + (xidx - RADIUS*GRID_LINES_PER_UNIT)*spacing;
-			float z = midz + (zidx - RADIUS*GRID_LINES_PER_UNIT)*spacing;
-			float dx = x - cam->location.x;
-			float dz = z - cam->location.z;
-			if (dx*dx + dz*dz > RADIUS*RADIUS)
-				heights[xidx][zidx] = NAN;
-			else
-				heights[xidx][zidx] = map_getheight(map, x, z);
-		}
-	}
-
-	for (int xidx = 0; xidx < 2*RADIUS*GRID_LINES_PER_UNIT; xidx++) {
-		for (int zidx = 0; zidx < 2*RADIUS*GRID_LINES_PER_UNIT; zidx++) {
-			float y = heights[xidx][zidx];
-			if (isnan(y))
-				continue;
-			float x = midx + (xidx - RADIUS*GRID_LINES_PER_UNIT)*spacing;
-			float z = midz + (zidx - RADIUS*GRID_LINES_PER_UNIT)*spacing;
-
-			if (!isnan(heights[xidx+1][zidx]))
-				camera_drawline(cam, (Vec3){x,y,z}, (Vec3){x+spacing,heights[xidx+1][zidx],z});
-			if (!isnan(heights[xidx][zidx+1]))
-				camera_drawline(cam, (Vec3){x,y,z}, (Vec3){x,heights[xidx][zidx+1],z+spacing});
+	for (int startx = startxmin; startx <= startxmax; startx += SECTION_SIZE) {
+		for (int startz = startzmin; startz <= startzmax; startz += SECTION_SIZE) {
+			struct Section *sect = find_or_add_section(map, startx, startz);
+			ensure_ytable_is_ready(map, sect);
+			for (int ix = 0; ix < SECTION_SIZE*YTABLE_ITEMS_PER_UNIT; ix++) {
+				for (int iz = 0; iz < SECTION_SIZE*YTABLE_ITEMS_PER_UNIT; iz++) {
+					float gap = 1.0f / YTABLE_ITEMS_PER_UNIT;
+					float x = sect->startx + gap*ix;
+					float z = sect->startz + gap*iz;
+					float dx = x - cam->location.x;
+					float dz = z - cam->location.z;
+					if (dx*dx + dz*dz < RADIUS*RADIUS && (dx+gap)*(dx+gap) + dz*dz < RADIUS*RADIUS)
+						camera_drawline(cam, (Vec3){x,sect->ytable[ix][iz],z}, (Vec3){x+gap,sect->ytable[ix+1][iz],z});
+					if (dx*dx + dz*dz < RADIUS*RADIUS && dx*dx + (dz+gap)*(dz+gap) < RADIUS*RADIUS)
+						camera_drawline(cam, (Vec3){x,sect->ytable[ix][iz],z}, (Vec3){x,sect->ytable[ix][iz+1],z+gap});
+				}
+			}
 		}
 	}
 }
