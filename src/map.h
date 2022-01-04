@@ -7,6 +7,7 @@ struct GaussianCurveMountain {
 	/*
 	y = yscale*e^(-(((x - centerx) / xzscale)^2 + ((z - centerz) / xzscale)^2))
 	yscale can be negative, xzscale can't, center must be within map
+	center coords are relative to section start, so that sections are easy to move
 	*/
 	float xzscale, yscale, centerx, centerz;
 };
@@ -18,7 +19,12 @@ struct Section {
 	int startx, startz;
 	struct GaussianCurveMountain mountains[100];
 
-	// Cached values for height of map, depends on heights of this and neighbor sections
+	/*
+	Cached values for height of map, depends on heights of this and neighbor sections
+	Raw version does not take in account neighbours and is always ready.
+	This way, sections can be generated beforehand and added to the map quickly as needed.
+	*/
+	float ytableraw[3*SECTION_SIZE*YTABLE_ITEMS_PER_UNIT + 1][3*SECTION_SIZE*YTABLE_ITEMS_PER_UNIT + 1];
 	float ytable[SECTION_SIZE*YTABLE_ITEMS_PER_UNIT + 1][SECTION_SIZE*YTABLE_ITEMS_PER_UNIT + 1];
 	bool ytableready;
 };

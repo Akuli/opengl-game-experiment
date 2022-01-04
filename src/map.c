@@ -29,8 +29,8 @@ static void generate_section(struct Section *sect, int startx, int startz)
 		sect->mountains[i] = (struct GaussianCurveMountain){
 			.xzscale = w,
 			.yscale = h,
-			.centerx = uniform_random_float(startx, startx + SECTION_SIZE),
-			.centerz = uniform_random_float(startz, startz + SECTION_SIZE),
+			.centerx = uniform_random_float(0, SECTION_SIZE),
+			.centerz = uniform_random_float(0, SECTION_SIZE),
 		};
 	}
 
@@ -43,25 +43,39 @@ static void generate_section(struct Section *sect, int startx, int startz)
 		sect->mountains[i] = (struct GaussianCurveMountain){
 			.xzscale = w,
 			.yscale = h,
-			.centerx = uniform_random_float(startx, startx + SECTION_SIZE),
-			.centerz = uniform_random_float(startz, startz + SECTION_SIZE),
+			.centerx = uniform_random_float(0, SECTION_SIZE),
+			.centerz = uniform_random_float(0, SECTION_SIZE),
 		};
 	}
 
 	// y=e^(-x^2) seems to be pretty much zero for |x| >= 2.5.
 	// We use this to keep gaussian curves within the neighboring sections.
-	int xmin = startx - SECTION_SIZE;
-	int zmin = startz - SECTION_SIZE;
-	int xmax = startx + 2*SECTION_SIZE;
-	int zmax = startz + 2*SECTION_SIZE;
+	int xzmin = -SECTION_SIZE, xzmax = 2*SECTION_SIZE;
 
 	for (i = 0; i < n; i++) {
 		float mindist = min4(
-			sect->mountains[i].centerx - xmin,
-			sect->mountains[i].centerz - zmin,
-			xmax - sect->mountains[i].centerx,
-			zmax - sect->mountains[i].centerz);
+			sect->mountains[i].centerx - xzmin,
+			sect->mountains[i].centerz - xzmin,
+			xzmax - sect->mountains[i].centerx,
+			xzmax - sect->mountains[i].centerz);
 		sect->mountains[i].xzscale = min(sect->mountains[i].xzscale, mindist/2.5f);
+	}
+
+	for (int xidx = 0; xidx <= 3*SECTION_SIZE*YTABLE_ITEMS_PER_UNIT; xidx++) {
+		for (int zidx = 0; zidx <= 3*SECTION_SIZE*YTABLE_ITEMS_PER_UNIT; zidx++) {
+			float gap = 1.0f / YTABLE_ITEMS_PER_UNIT;
+			float x = sect->startx + xidx*gap - SECTION_SIZE;
+			float z = sect->startz + zidx*gap - SECTION_SIZE;
+
+			float y = 0;
+			for (int i = 0; i < sizeof(sect->mountains) / sizeof(sect->mountains[0]); i++) {
+				float dx = x - sect->startx - sect->mountains[i].centerx;
+				float dz = z - sect->startz - sect->mountains[i].centerz;
+				float xzscale = sect->mountains[i].xzscale;
+				y += sect->mountains[i].yscale * expf(-1/(xzscale*xzscale) * (dx*dx + dz*dz));
+			}
+			sect->ytableraw[xidx][zidx] = y;
+		}
 	}
 }
 
@@ -134,10 +148,13 @@ static struct Section *find_or_add_section(struct Map *map, int startx, int star
 	if (!res) {
 		log_printf("there are %d sections, adding one more to startx=%d startz=%d",
 			map->nsections, startx, startz);
+		uint64_t a = SDL_GetPerformanceCounter();
 		res = &map->sections[map->nsections];
 		generate_section(res, startx, startz);
 		add_section_to_itable(map, map->nsections);
 		map->nsections++;
+		uint64_t b = SDL_GetPerformanceCounter();
+		log_printf("added section %d", (int)(b-a));
 	}
 	return res;
 }
@@ -159,24 +176,22 @@ static void ensure_ytable_is_ready(struct Map *map, struct Section *sect)
 		find_or_add_section(map, sect->startx + SECTION_SIZE, sect->startz + SECTION_SIZE),
 	};
 
+	uint64_t a = SDL_GetPerformanceCounter();
 	for (int xidx = 0; xidx <= SECTION_SIZE*YTABLE_ITEMS_PER_UNIT; xidx++) {
 		for (int zidx = 0; zidx <= SECTION_SIZE*YTABLE_ITEMS_PER_UNIT; zidx++) {
-			float gap = 1.0f / YTABLE_ITEMS_PER_UNIT;
-			float x = sect->startx + xidx*gap;
-			float z = sect->startz + zidx*gap;
-
 			float y = 0;
 			for (struct Section **s = sections; s < sections+9; s++) {
-				for (int i = 0; i < sizeof((*s)->mountains) / sizeof((*s)->mountains[0]); i++) {
-					float dx = x - (*s)->mountains[i].centerx;
-					float dz = z - (*s)->mountains[i].centerz;
-					float xzscale = (*s)->mountains[i].xzscale;
-					y += (*s)->mountains[i].yscale * expf(-1/(xzscale*xzscale) * (dx*dx + dz*dz));
-				}
+				int xdiff = sect->startx - (*s)->startx;
+				int zdiff = sect->startz - (*s)->startz;
+				int ix = xidx + (SECTION_SIZE + xdiff)*YTABLE_ITEMS_PER_UNIT;
+				int iz = zidx + (SECTION_SIZE + zdiff)*YTABLE_ITEMS_PER_UNIT;
+				y += (*s)->ytableraw[ix][iz];
 			}
 			sect->ytable[xidx][zidx] = y;
 		}
 	}
+	uint64_t b = SDL_GetPerformanceCounter();
+	log_printf("computed ytable %d", (int)(b-a));
 
 	sect->ytableready = true;
 }
