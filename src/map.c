@@ -36,7 +36,7 @@ To provide many sections quickly, there's a separate thread that generates them 
 background. After generating, a section can be added anywhere on the map.
 */
 struct SectionQueue {
-	struct Section sects[15];
+	struct Section sects[20];  // should have about 4x the room it typically needs, because corner cases
 	int len;
 	SDL_mutex *lock;  // hold this while adding/removing/checking sections
 	bool quit;
