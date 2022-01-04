@@ -69,13 +69,6 @@ static void draw_2d_rect(SDL_Surface *surf, SDL_Rect r)
 	}
 }
 
-static void swap(int *a, int *b)
-{
-	int tmp = *a;
-	*a = *b;
-	*b = tmp;
-}
-
 static bool point_is_in_view(const struct Camera *cam, Vec3 p)
 {
 	for (int i = 0; i < sizeof(cam->visplanes)/sizeof(cam->visplanes[0]); i++) {
@@ -112,8 +105,9 @@ void camera_drawline(const struct Camera *cam, Vec3 start3, Vec3 end3)
 		draw_2d_rect(cam->surface, (SDL_Rect){ x1, y1-1, x2-x1, 3 });
 	} else if (abs(y2-y1) > abs(x2-x1)) {
 		// Many vertical lines
-		if (x1 > x2) { swap(&x1, &x2); swap(&y1, &y2); }
-		for (int x = x1; x <= x2; x++) {
+		// Avoid doing many loops outside the screen, that's slow
+		int a = max(min(x1, x2), 0), b = min(max(x1, x2), cam->surface->w);
+		for (int x = a; x <= b; x++) {
 			int y     = y1 + (y2 - y1)*(x   - x1)/(x2 - x1);
 			int ynext = y1 + (y2 - y1)*(x+1 - x1)/(x2 - x1);
 			clamp(&ynext, min(y1,y2), max(y1,y2));
@@ -121,8 +115,8 @@ void camera_drawline(const struct Camera *cam, Vec3 start3, Vec3 end3)
 		}
 	} else {
 		// Many horizontal lines
-		if (y1 > y2) { swap(&x1, &x2); swap(&y1, &y2); }
-		for (int y = y1; y <= y2; y++) {
+		int a = max(min(y1, y2), 0), b = min(max(y1, y2), cam->surface->h);
+		for (int y = a; y <= b; y++) {
 			int x     = x1 + (x2 - x1)*(y   - y1)/(y2 - y1);
 			int xnext = x1 + (x2 - x1)*(y+1 - y1)/(y2 - y1);
 			clamp(&xnext, min(x1,x2), max(x1,x2));
