@@ -227,6 +227,7 @@ static struct Section *find_or_add_section(struct Map *map, int startx, int star
 		res->startz = startz;
 		add_section_to_itable(map, map->nsections);
 		map->nsections++;
+		log_printf("added a section, map now has %d sections", map->nsections);
 	}
 	return res;
 }
