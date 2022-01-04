@@ -11,12 +11,8 @@ static float uniform_random_float(float min, float max)
 	return min + rand()*(max-min)/(float)RAND_MAX;
 }
 
-static void generate_section(struct Section *sect, int startx, int startz)
+static void generate_section(struct Section *sect)
 {
-	SDL_assert(startx % SECTION_SIZE == 0);
-	SDL_assert(startz % SECTION_SIZE == 0);
-	sect->startx = startx;
-	sect->startz = startz;
 	sect->ytableready = false;
 
 	int i;
@@ -77,6 +73,16 @@ static void generate_section(struct Section *sect, int startx, int startz)
 			sect->ytableraw[xidx][zidx] = y;
 		}
 	}
+}
+
+void map_prepare_section(struct Map *map)
+{
+	if (map->queuelen == sizeof(map->queue)/sizeof(map->queue[0]))
+		return;
+
+	log_printf("queue has %d sections, generating one more", map->queuelen);
+	struct Section *ptr = &map->queue[map->queuelen++];
+	generate_section(ptr);
 }
 
 static unsigned section_hash(int startx, int startz)
@@ -144,17 +150,22 @@ static void add_section_to_itable(struct Map *map, int sectidx)
 
 static struct Section *find_or_add_section(struct Map *map, int startx, int startz)
 {
+	SDL_assert(startx % SECTION_SIZE == 0);
+	SDL_assert(startz % SECTION_SIZE == 0);
+
 	struct Section *res = find_section(map, startx, startz);
 	if (!res) {
-		log_printf("there are %d sections, adding one more to startx=%d startz=%d",
-			map->nsections, startx, startz);
-		uint64_t a = SDL_GetPerformanceCounter();
+		log_printf("there are %d sections (%d in queue), adding one more to startx=%d startz=%d",
+			map->nsections, map->queuelen, startx, startz);
+		if (map->queuelen == 0)
+			map_prepare_section(map);
+
 		res = &map->sections[map->nsections];
-		generate_section(res, startx, startz);
+		*res = map->queue[--map->queuelen];
+		res->startx = startx;
+		res->startz = startz;
 		add_section_to_itable(map, map->nsections);
 		map->nsections++;
-		uint64_t b = SDL_GetPerformanceCounter();
-		log_printf("added section %d", (int)(b-a));
 	}
 	return res;
 }

@@ -35,10 +35,21 @@ struct Map {
 
 	int *itable;  // Hash table of indexes into sections array
 	unsigned sectsalloced;  // space allocated in itable and sections
+
+	// queue of sections to add to map later, when they are needed
+	struct Section queue[15];
+	int queuelen;
 };
 
 float map_getheight(struct Map *map, float x, float z);
 void map_drawgrid(struct Map *map, const struct Camera *cam);
+
+/*
+Run this when idle, if needed generates one section and adds this to queue.
+You typically need many new sections at once, because neighbor sections affect the section
+that needs to be added. If there's nothing in queue, that's slow.
+*/
+void map_prepare_section(struct Map *map);
 
 void map_freebuffers(const struct Map *map);
 

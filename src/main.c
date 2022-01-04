@@ -18,7 +18,7 @@ int main(void)
 
 	uint64_t delay = SDL_GetPerformanceFrequency() / CAMERA_FPS;
 
-	struct Map map = {0};
+	static struct Map map = {0};
 	struct Camera cam = {
 		.screencentery = CAMERA_SCREEN_HEIGHT/2,
 		.world2cam.rows = {{1,0,0},{0,1,0},{0,0,1}},
@@ -107,6 +107,8 @@ int main(void)
 			map_drawgrid(&map, &cam);
 			SDL_UpdateWindowSurface(wnd);
 		}
+
+		map_prepare_section(&map);
 
 		double percent = (SDL_GetPerformanceCounter() - start) / (double)delay;
 		if (percent > 1)
