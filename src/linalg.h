@@ -10,7 +10,9 @@ typedef struct { float rows[3][3]; } Mat3;
 
 inline Vec3 vec3_add(Vec3 a, Vec3 b) { return (Vec3){a.x+b.x, a.y+b.y, a.z+b.z }; }
 inline void vec3_add_inplace(Vec3 *a, Vec3 b) { a->x += b.x; a->y += b.y; a->z += b.z; }
+inline Vec2 vec2_sub(Vec2 a, Vec2 b) { return (Vec2){a.x-b.x, a.y-b.y }; }
 inline Vec3 vec3_sub(Vec3 a, Vec3 b) { return (Vec3){a.x-b.x, a.y-b.y, a.z-b.z }; }
+inline float vec2_dot(Vec2 a, Vec2 b) { return a.x*b.x + a.y*b.y; }
 inline float vec3_dot(Vec3 a, Vec3 b) { return a.x*b.x + a.y*b.y + a.z*b.z; }
 
 inline float mat3_det(Mat3 M)

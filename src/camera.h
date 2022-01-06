@@ -83,6 +83,7 @@ inline Vec2 camera_point_cam2screen(const struct Camera *cam, Vec3 pt)
 	};
 }
 
+void camera_fill_triangle(const struct Camera *cam, const Vec3 *points, uint8_t r, uint8_t g, uint8_t b);
 void camera_drawline(const struct Camera *cam, Vec3 start3, Vec3 end3);
 
 

@@ -69,7 +69,7 @@ static void generate_section(struct Section *sect)
 		};
 	}
 
-	// y=e^(-x^2) seems to be pretty much zero for |x| >= 2.5.
+	// y=e^(-x^2) seems to be pretty much zero for |x| >= 3.
 	// We use this to keep gaussian curves within the neighboring sections.
 	int xzmin = -SECTION_SIZE, xzmax = 2*SECTION_SIZE;
 
@@ -79,7 +79,7 @@ static void generate_section(struct Section *sect)
 			sect->mountains[i].centerz - xzmin,
 			xzmax - sect->mountains[i].centerx,
 			xzmax - sect->mountains[i].centerz);
-		sect->mountains[i].xzscale = min(sect->mountains[i].xzscale, mindist/2.5f);
+		sect->mountains[i].xzscale = min(sect->mountains[i].xzscale, mindist/3);
 	}
 
 	// This loop is too slow to run within a single frame
@@ -359,10 +359,25 @@ void map_drawgrid(struct Map *map, const struct Camera *cam)
 					int z = sect->startz + iz;
 					float dx = x - cam->location.x;
 					float dz = z - cam->location.z;
-					if (dx*dx + dz*dz < r*r && (dx+1)*(dx+1) + dz*dz < r*r)
-						camera_drawline(cam, (Vec3){x,sect->ytable[ix][iz],z}, (Vec3){x+1,sect->ytable[ix+1][iz],z});
-					if (dx*dx + dz*dz < r*r && dx*dx + (dz+1)*(dz+1) < r*r)
-						camera_drawline(cam, (Vec3){x,sect->ytable[ix][iz],z}, (Vec3){x,sect->ytable[ix][iz+1],z+1});
+
+					if (dx*dx + dz*dz < r*r
+						&& (dx+1)*(dx+1) + dz*dz < r*r
+						&& dx*dx + (dz+1)*(dz+1) < r*r
+						&& (dx+1)*(dx+1) + (dz+1)*(dz+1) < r*r)
+					{
+						float ratio = (dx*dx + dz*dz)/(r*r);
+						uint8_t brightness = (uint8_t)(255*expf(-7*ratio));
+						camera_fill_triangle(cam, (Vec3[]){
+							{x,sect->ytable[ix][iz],z},
+							{x,sect->ytable[ix][iz+1],z+1},
+							{x+1,sect->ytable[ix+1][iz],z},
+						}, brightness,0,0);
+						camera_fill_triangle(cam, (Vec3[]){
+							{x+1,sect->ytable[ix+1][iz+1],z+1},
+							{x,sect->ytable[ix][iz+1],z+1},
+							{x+1,sect->ytable[ix+1][iz],z},
+						}, brightness,0,0);
+					}
 				}
 			}
 		}

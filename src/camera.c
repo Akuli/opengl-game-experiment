@@ -3,6 +3,7 @@
 #include <string.h>
 #include <SDL2/SDL.h>
 #include "linalg.h"
+#include "log.h"
 
 #define min(a,b) ((a)<(b) ? (a) : (b))
 #define max(a,b) ((a)>(b) ? (a) : (b))
@@ -69,6 +70,19 @@ static void draw_2d_rect(SDL_Surface *surf, SDL_Rect r)
 	}
 }
 
+static void draw_horizontal_line(SDL_Surface *surf, int y, int xmin, int xmax, uint32_t color)
+{
+	SDL_assert(surf->pitch % sizeof(uint32_t) == 0);
+	int mypitch = surf->pitch / sizeof(uint32_t);
+
+	SDL_assert(xmin <= xmax);
+	xmin = max(xmin, 0);
+	xmax = min(xmax, surf->w);
+	uint32_t *row = (uint32_t *)surf->pixels + y*mypitch;
+	for (int x = xmin; x < xmax; x++)
+		row[x] = color;
+}
+
 static bool point_is_in_view(const struct Camera *cam, Vec3 p)
 {
 	for (int i = 0; i < sizeof(cam->visplanes)/sizeof(cam->visplanes[0]); i++) {
@@ -76,6 +90,53 @@ static bool point_is_in_view(const struct Camera *cam, Vec3 p)
 			return false;
 	}
 	return true;
+}
+
+static int compare_vec2_by_y(const void *aptr, const void *bptr)
+{
+	const Vec2 *a = aptr;
+	const Vec2 *b = bptr;
+	return (a->y > b->y) - (a->y < b->y);
+}
+
+void camera_fill_triangle(const struct Camera *cam, const Vec3 *points, uint8_t r, uint8_t g, uint8_t b)
+{
+	uint32_t color = SDL_MapRGB(cam->surface->format, r, g, b);
+
+	// make sure that camera_point_cam2screen will work
+	if (!plane_whichside(cam->visplanes[CAMERA_CAMPLANE_IDX], points[0]) ||
+		!plane_whichside(cam->visplanes[CAMERA_CAMPLANE_IDX], points[1]) ||
+		!plane_whichside(cam->visplanes[CAMERA_CAMPLANE_IDX], points[2]))
+	{
+		return;
+	}
+
+	if (!point_is_in_view(cam, points[0]) && !point_is_in_view(cam, points[1]) && !point_is_in_view(cam, points[2]))
+		return;
+
+	Vec2 screenpoints[3];
+	for (int i = 0; i < 3; i++)
+		screenpoints[i] = camera_point_cam2screen(cam, camera_point_world2cam(cam, points[i]));
+
+	qsort(screenpoints, 3, sizeof screenpoints[0], compare_vec2_by_y);
+	SDL_assert(screenpoints[0].y <= screenpoints[1].y && screenpoints[1].y <= screenpoints[2].y);
+	int xmin = (int)floorf(screenpoints[0].x);
+	int ymin = (int)floorf(screenpoints[0].y);
+	int xmid = (int)floorf(screenpoints[1].x);
+	int ymid = (int)floorf(screenpoints[1].y);
+	int xmax = (int)floorf(screenpoints[2].x);
+	int ymax = (int)floorf(screenpoints[2].y);
+
+	for (int y = max(ymin, 0); y < min(ymid, cam->surface->h); y++) {
+		int x1 = xmin + (xmid-xmin)*(y - ymin)/(ymid - ymin);
+		int x2 = xmin + (xmax-xmin)*(y - ymin)/(ymax - ymin);
+		draw_horizontal_line(cam->surface, y, min(x1,x2), max(x1,x2), color);
+	}
+	for (int y = max(ymid, 0); y < min(ymax, cam->surface->h); y++) {
+		int x1 = xmid + (xmax-xmid)*(y - ymid)/(ymax - ymid);
+		int x2 = xmin + (xmax-xmin)*(y - ymin)/(ymax - ymin);
+		draw_horizontal_line(cam->surface, y, min(x1,x2), max(x1,x2), color);
+	}
 }
 
 void camera_drawline(const struct Camera *cam, Vec3 start3, Vec3 end3)

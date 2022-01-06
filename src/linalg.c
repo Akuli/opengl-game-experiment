@@ -3,7 +3,9 @@
 
 extern inline Vec3 vec3_add(Vec3 a, Vec3 b);
 extern inline void vec3_add_inplace(Vec3 *a, Vec3 b);
+extern inline Vec2 vec2_sub(Vec2 a, Vec2 b);
 extern inline Vec3 vec3_sub(Vec3 a, Vec3 b);
+extern inline float vec2_dot(Vec2 a, Vec2 b);
 extern inline float vec3_dot(Vec3 a, Vec3 b);
 extern inline float mat3_det(Mat3 M);
 extern inline Vec3 mat3_mul_vec3(Mat3 M, Vec3 v);
