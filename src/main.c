@@ -6,7 +6,7 @@
 #include "linalg.h"
 #include "log.h"
 
-#define MOVING_SPEED 2.0f
+#define MOVING_SPEED 10.0f
 #define TURNING_SPEED 2.0f
 
 int main(void)

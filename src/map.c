@@ -6,8 +6,7 @@
 #define min(x, y) ((x)<(y) ? (x) : (y))
 #define min4(a,b,c,d) min(min(a,b),min(c,d))
 
-#define SECTION_SIZE 8  // side length of section square on xz plane
-#define YTABLE_ITEMS_PER_UNIT 5  // how frequently to cache computed heights
+#define SECTION_SIZE 40  // side length of section square on xz plane
 
 struct Section {
 	int startx, startz;
@@ -27,8 +26,8 @@ struct Section {
 		- is slow to compute
 		- is always ready to be used, even when ytableready is false
 	*/
-	float ytableraw[3*SECTION_SIZE*YTABLE_ITEMS_PER_UNIT + 1][3*SECTION_SIZE*YTABLE_ITEMS_PER_UNIT + 1];
-	float ytable[SECTION_SIZE*YTABLE_ITEMS_PER_UNIT + 1][SECTION_SIZE*YTABLE_ITEMS_PER_UNIT + 1];
+	float ytableraw[3*SECTION_SIZE + 1][3*SECTION_SIZE + 1];
+	float ytable[SECTION_SIZE + 1][SECTION_SIZE + 1];
 	bool ytableready;
 };
 
@@ -46,7 +45,7 @@ static void generate_section(struct Section *sect)
 
 	// wide and deep/tall
 	for (i = 0; i < n/20; i++) {
-		float h = tanf(uniform_random_float(-1.4f, 1.4f));
+		float h = 5*tanf(uniform_random_float(-1.4f, 1.4f));
 		float w = uniform_random_float(fabsf(h), 3*fabsf(h));
 		sect->mountains[i] = (struct GaussianCurveMountain){
 			.xzscale = w,
@@ -58,7 +57,7 @@ static void generate_section(struct Section *sect)
 
 	// narrow and shallow
 	for (; i < n; i++) {
-		float h = uniform_random_float(0.05f, 0.3f);
+		float h = uniform_random_float(0.25f, 1.5f);
 		float w = uniform_random_float(2*h, 5*h);
 		if (rand() % 2)
 			h = -h;
@@ -84,11 +83,10 @@ static void generate_section(struct Section *sect)
 	}
 
 	// This loop is too slow to run within a single frame
-	for (int xidx = 0; xidx <= 3*SECTION_SIZE*YTABLE_ITEMS_PER_UNIT; xidx++) {
-		for (int zidx = 0; zidx <= 3*SECTION_SIZE*YTABLE_ITEMS_PER_UNIT; zidx++) {
-			float gap = 1.0f / YTABLE_ITEMS_PER_UNIT;
-			float x = xidx*gap - SECTION_SIZE;
-			float z = zidx*gap - SECTION_SIZE;
+	for (int xidx = 0; xidx <= 3*SECTION_SIZE; xidx++) {
+		for (int zidx = 0; zidx <= 3*SECTION_SIZE; zidx++) {
+			int x = xidx - SECTION_SIZE;
+			int z = zidx - SECTION_SIZE;
 
 			float y = 0;
 			for (int i = 0; i < sizeof(sect->mountains) / sizeof(sect->mountains[0]); i++) {
@@ -292,14 +290,14 @@ static void ensure_ytable_is_ready(struct Map *map, struct Section *sect)
 		find_or_add_section(map, sect->startx + SECTION_SIZE, sect->startz + SECTION_SIZE),
 	};
 
-	for (int xidx = 0; xidx <= SECTION_SIZE*YTABLE_ITEMS_PER_UNIT; xidx++) {
-		for (int zidx = 0; zidx <= SECTION_SIZE*YTABLE_ITEMS_PER_UNIT; zidx++) {
+	for (int xidx = 0; xidx <= SECTION_SIZE; xidx++) {
+		for (int zidx = 0; zidx <= SECTION_SIZE; zidx++) {
 			float y = 0;
 			for (struct Section **s = sections; s < sections+9; s++) {
 				int xdiff = sect->startx - (*s)->startx;
 				int zdiff = sect->startz - (*s)->startz;
-				int ix = xidx + (SECTION_SIZE + xdiff)*YTABLE_ITEMS_PER_UNIT;
-				int iz = zidx + (SECTION_SIZE + zdiff)*YTABLE_ITEMS_PER_UNIT;
+				int ix = xidx + SECTION_SIZE + xdiff;
+				int iz = zidx + SECTION_SIZE + zdiff;
 				y += (*s)->ytableraw[ix][iz];
 			}
 			sect->ytable[xidx][zidx] = y;
@@ -324,8 +322,8 @@ float map_getheight(struct Map *map, float x, float z)
 	struct Section *sect = find_or_add_section(map, get_section_start_coordinate(x), get_section_start_coordinate(z));
 	ensure_ytable_is_ready(map, sect);
 
-	float ixfloat = (x - sect->startx)*YTABLE_ITEMS_PER_UNIT;
-	float izfloat = (z - sect->startz)*YTABLE_ITEMS_PER_UNIT;
+	float ixfloat = x - sect->startx;
+	float izfloat = z - sect->startz;
 	int ix = (int)floorf(ixfloat);
 	int iz = (int)floorf(izfloat);
 	// TODO: some kind of modulo function?
@@ -341,7 +339,7 @@ float map_getheight(struct Map *map, float x, float z)
 
 void map_drawgrid(struct Map *map, const struct Camera *cam)
 {
-	float r = 10;
+	float r = 50;
 
 	int startxmin = get_section_start_coordinate(cam->location.x - r);
 	int startxmax = get_section_start_coordinate(cam->location.x + r);
@@ -355,17 +353,16 @@ void map_drawgrid(struct Map *map, const struct Camera *cam)
 		for (int startz = startzmin; startz <= startzmax; startz += SECTION_SIZE) {
 			struct Section *sect = find_or_add_section(map, startx, startz);
 			ensure_ytable_is_ready(map, sect);
-			for (int ix = 0; ix < SECTION_SIZE*YTABLE_ITEMS_PER_UNIT; ix++) {
-				for (int iz = 0; iz < SECTION_SIZE*YTABLE_ITEMS_PER_UNIT; iz++) {
-					float gap = 1.0f / YTABLE_ITEMS_PER_UNIT;
-					float x = sect->startx + gap*ix;
-					float z = sect->startz + gap*iz;
+			for (int ix = 0; ix < SECTION_SIZE; ix++) {
+				for (int iz = 0; iz < SECTION_SIZE; iz++) {
+					int x = sect->startx + ix;
+					int z = sect->startz + iz;
 					float dx = x - cam->location.x;
 					float dz = z - cam->location.z;
-					if (dx*dx + dz*dz < r*r && (dx+gap)*(dx+gap) + dz*dz < r*r)
-						camera_drawline(cam, (Vec3){x,sect->ytable[ix][iz],z}, (Vec3){x+gap,sect->ytable[ix+1][iz],z});
-					if (dx*dx + dz*dz < r*r && dx*dx + (dz+gap)*(dz+gap) < r*r)
-						camera_drawline(cam, (Vec3){x,sect->ytable[ix][iz],z}, (Vec3){x,sect->ytable[ix][iz+1],z+gap});
+					if (dx*dx + dz*dz < r*r && (dx+1)*(dx+1) + dz*dz < r*r)
+						camera_drawline(cam, (Vec3){x,sect->ytable[ix][iz],z}, (Vec3){x+1,sect->ytable[ix+1][iz],z});
+					if (dx*dx + dz*dz < r*r && dx*dx + (dz+1)*(dz+1) < r*r)
+						camera_drawline(cam, (Vec3){x,sect->ytable[ix][iz],z}, (Vec3){x,sect->ytable[ix][iz+1],z+1});
 				}
 			}
 		}
