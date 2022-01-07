@@ -62,10 +62,8 @@ struct OpenglBoilerplateState opengl_boilerplate_init(void)
 		log_printf_abort("SDL_GL_CreateContext failed: %s", SDL_GetError());
 
 	GLenum tmp;
-	if ((tmp = glewInit()) != GLEW_OK) {
-		fprintf(stderr, "Error in glewInit(): %s\n", glewGetErrorString(tmp));
-		abort();
-	}
+	if ((tmp = glewInit()) != GLEW_OK)
+		log_printf_abort("Error in glewInit(): %s", glewGetErrorString(tmp));
 
 	// This makes our buffer swap syncronized with the monitor's vertical refresh
 	int ret = SDL_GL_SetSwapInterval(1);
