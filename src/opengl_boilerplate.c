@@ -66,9 +66,11 @@ struct OpenglBoilerplateState opengl_boilerplate_init(void)
 	if ((tmp = glewInit()) != GLEW_OK)
 		log_printf_abort("Error in glewInit(): %s", glewGetErrorString(tmp));
 
-	// This makes our buffer swap syncronized with the monitor's vertical refresh
+	// This makes our buffer swap syncronized with the monitor's vertical refresh.
+	// Fails when using software rendering (see README)
 	int ret = SDL_GL_SetSwapInterval(1);
-	SDL_assert(ret == 0);
+	if (ret != 0)
+		log_printf("SDL_GL_SetSwapInterval failed: %s", SDL_GetError());
 
 	// Run once for each vertex (corner of triangle)
 	const char *vertex_shader =
