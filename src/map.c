@@ -318,9 +318,6 @@ static void ensure_ytable_is_ready(struct Map *map, struct Section *sect)
 	float (*ptr)[9] = sect->vertexdata;
 	for (int ix = 0; ix < SECTION_SIZE; ix++) {
 		for (int iz = 0; iz < SECTION_SIZE; iz++) {
-			if (ix==0 && iz==0) {
-				continue;
-			}
 			float triangle1[] = {
 				sect->startx + ix  , sect->ytable[ix  ][iz  ], sect->startz + iz  ,
 				sect->startx + ix+1, sect->ytable[ix+1][iz  ], sect->startz + iz  ,
@@ -335,17 +332,6 @@ static void ensure_ytable_is_ready(struct Map *map, struct Section *sect)
 			memcpy(*ptr++, triangle2, sizeof triangle2);
 		}
 	}
-	GLfloat asd[] = {
-		0, 0, -1,
-		1, 1, -2,
-		-1, 2, -3,
-
-		0, 1, -1,
-		0.5, 1, -2,
-		-0.5, 1, -5,
-	};
-	memcpy(*ptr, asd, sizeof asd);
-	ptr += sizeof(asd)/sizeof(*ptr);
 	SDL_assert(ptr == sect->vertexdata + sizeof(sect->vertexdata)/sizeof(sect->vertexdata[0]));
 
 	sect->ytableready = true;
