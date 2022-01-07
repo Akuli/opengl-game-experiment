@@ -17,7 +17,6 @@ int main(void)
 	struct Camera cam = {
 		.world2cam.rows = {{1,0,0},{0,1,0},{0,0,1}},
 		.cam2world.rows = {{1,0,0},{0,1,0},{0,0,1}},
-		.location = {1, map_getheight(map, 1, 1) + 1, 1},
 	};
 
 	struct OpenglBoilerplateState bpstate = opengl_boilerplate_init();
@@ -25,15 +24,15 @@ int main(void)
 	int zdir = 0;
 
 	while (1) {
+		cam.location.z += 0.3f*zdir;  // FIXME: should depend on fps
+		cam.location.y = map_getheight(map, cam.location.x, cam.location.z) + 5;
+
 		glClearColor(0, 0, 0, 0);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		glUniform3f(bpstate.camloc_uniform, cam.location.x, cam.location.y, cam.location.z);
 		map_drawgrid(map, &cam);
 		SDL_GL_SwapWindow(bpstate.window);
-
-		cam.location.z += zdir;  // FIXME: should depend on fps
-		cam.location.y = map_getheight(map, cam.location.x, cam.location.z) + 1;
 
 		SDL_Event e;
 		while (SDL_PollEvent(&e)) switch(e.type) {

@@ -84,7 +84,7 @@ struct OpenglBoilerplateState opengl_boilerplate_init(void)
 		"    // Resulting z will be used in z-buffer\n"
 		"    gl_Position = vec4(pos.x, pos.y, 1, -pos.z);\n"
 		"\n"
-		"    vertexToFragmentColor.x = exp(-0.0003*dot(pos, pos));\n"
+		"    vertexToFragmentColor.x = exp(-0.0003*pow(30+length(pos),2));\n"
 		"    vertexToFragmentColor.y = 0;\n"
 		"    vertexToFragmentColor.z = 0;\n"
 		"    vertexToFragmentColor.w = 1;\n"

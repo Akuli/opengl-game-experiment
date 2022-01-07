@@ -114,7 +114,7 @@ that needs to be added. There's a separate thread that generates them in the
 background. After generating, a section can be added anywhere on the map.
 */
 struct SectionQueue {
-	struct Section sects[20];  // should have about 4x the room it typically needs, because corner cases
+	struct Section sects[30];  // should have about 4x the room it typically needs, because corner cases
 	int len;
 	SDL_mutex *lock;  // hold this while adding/removing/checking sects or len
 	bool quit;
@@ -370,7 +370,7 @@ float map_getheight(struct Map *map, float x, float z)
 // TODO: rename this function
 void map_drawgrid(struct Map *map, const struct Camera *cam)
 {
-	float r = 50;
+	float r = 80;
 
 	int startxmin = get_section_start_coordinate(cam->location.x - r);
 	int startxmax = get_section_start_coordinate(cam->location.x + r);
