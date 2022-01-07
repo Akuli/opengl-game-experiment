@@ -367,6 +367,7 @@ void map_drawgrid(struct Map *map, const struct Camera *cam)
 					{
 						float ratio = (dx*dx + dz*dz)/(r*r);
 						uint8_t brightness = (uint8_t)(255*expf(-7*ratio));
+						/*
 						camera_fill_triangle(cam, (Vec3[]){
 							{x,sect->ytable[ix][iz],z},
 							{x,sect->ytable[ix][iz+1],z+1},
@@ -377,6 +378,7 @@ void map_drawgrid(struct Map *map, const struct Camera *cam)
 							{x,sect->ytable[ix][iz+1],z+1},
 							{x+1,sect->ytable[ix+1][iz],z},
 						}, brightness,0,0);
+						*/
 					}
 				}
 			}

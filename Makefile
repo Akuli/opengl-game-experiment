@@ -10,6 +10,9 @@ CFLAGS += -g
 CFLAGS += -MMD
 LDFLAGS += -lm -lSDL2
 
+CFLAGS += $(shell pkg-config glew --cflags)
+LDFLAGS += $(shell pkg-config glew --libs)
+
 SRC := $(wildcard src/*.c)
 OBJ := $(SRC:src/%.c=obj/%.o)
 DEPENDS = $(OBJ:%.o=%.d)
