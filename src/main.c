@@ -22,19 +22,43 @@ int main(void)
 
 	struct OpenglBoilerplateState bpstate = opengl_boilerplate_init();
 
+	int zdir = 0;
+
 	while (1) {
 		glClearColor(0, 0, 0, 0);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		map_drawgrid(map, &cam);
 
+		glUniform3f(bpstate.camloc_uniform, cam.location.x, cam.location.y, cam.location.z);
+		map_drawgrid(map, &cam);
 		SDL_GL_SwapWindow(bpstate.window);
 
+		cam.location.z += zdir;  // FIXME: should depend on fps
+		cam.location.y = map_getheight(map, cam.location.x, cam.location.z) + 1;
+
 		SDL_Event e;
-		while (SDL_PollEvent(&e)) {
-			if (e.type == SDL_QUIT) {
+		while (SDL_PollEvent(&e)) switch(e.type) {
+			case SDL_QUIT:
 				opengl_boilerplate_quit(&bpstate);
 				return 0;
-			}
+
+			case SDL_KEYDOWN:
+				switch(e.key.keysym.scancode) {
+					case SDL_SCANCODE_W: zdir = -1; break;
+					case SDL_SCANCODE_S: zdir = 1; break;
+					default: break;
+				}
+				break;
+
+			case SDL_KEYUP:
+				switch(e.key.keysym.scancode) {
+					case SDL_SCANCODE_W: if (zdir == -1) zdir = 0; break;
+					case SDL_SCANCODE_S: if (zdir == 1) zdir = 0; break;
+					default: break;
+				}
+				break;
+
+			default:
+				break;
 		}
 	}
 }

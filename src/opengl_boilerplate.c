@@ -74,15 +74,17 @@ struct OpenglBoilerplateState opengl_boilerplate_init(void)
 		"#version 330\n"
 		"\n"
 		"layout(location = 0) in vec3 position;\n"
+		"uniform vec3 cameraLocation;\n"
 		"smooth out vec4 vertexToFragmentColor;\n"
 		"\n"
 		"void main(void)\n"
 		"{\n"
+		"    vec3 pos = position - cameraLocation;\n"
 		"    // Other components of (x,y,z,w) will be implicitly divided by w\n"
 		"    // Resulting z will be used in z-buffer\n"
-		"    gl_Position = vec4(position.x, position.y, 1, -position.z);\n"
+		"    gl_Position = vec4(pos.x, pos.y, 1, -pos.z);\n"
 		"\n"
-		"    vertexToFragmentColor.x = exp(-0.0003*dot(position, position));\n"
+		"    vertexToFragmentColor.x = exp(-0.0003*dot(pos, pos));\n"
 		"    vertexToFragmentColor.y = 0;\n"
 		"    vertexToFragmentColor.z = 0;\n"
 		"    vertexToFragmentColor.w = 1;\n"
@@ -115,8 +117,10 @@ struct OpenglBoilerplateState opengl_boilerplate_init(void)
 		glDetachShader(prog, shaders[i]);
 	for (int i = 0; i < sizeof(shaders)/sizeof(shaders[0]); i++)
 		glDeleteShader(shaders[i]);
-	glUseProgram(prog);
 
+	GLint camlocuni = glGetUniformLocation(prog, "cameraLocation");
+
+	glUseProgram(prog);
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_GREATER);
 	glClearDepth(0);
@@ -128,7 +132,11 @@ struct OpenglBoilerplateState opengl_boilerplate_init(void)
 
 	glViewport(0, 0, CAMERA_SCREEN_WIDTH, CAMERA_SCREEN_HEIGHT);
 
-	return (struct OpenglBoilerplateState){wnd, ctx};
+	return (struct OpenglBoilerplateState){
+		.window = wnd,
+		.ctx = ctx,
+		.camloc_uniform = camlocuni,
+	};
 }
 
 void opengl_boilerplate_quit(const struct OpenglBoilerplateState *state)
