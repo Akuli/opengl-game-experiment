@@ -8,6 +8,6 @@ struct Map;
 struct Map *map_new(void);
 void map_destroy(struct Map *map);
 float map_getheight(struct Map *map, float x, float z);
-void map_drawgrid(struct Map *map, const struct Camera *cam);
+void map_render(struct Map *map, const struct Camera *cam);
 
 #endif

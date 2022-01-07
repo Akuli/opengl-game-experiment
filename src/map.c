@@ -164,7 +164,7 @@ struct Map {
 	struct SectionQueue queue;
 	SDL_Thread *prepthread;
 
-	GLuint vbo;  // Vertex Buffer Object
+	GLuint vbo;  // Vertex Buffer Object, represents triangles going to gpu
 };
 
 static unsigned section_hash(int startx, int startz)
@@ -367,10 +367,10 @@ float map_getheight(struct Map *map, float x, float z)
 		+ t*u*sect->ytable[ix+1][iz+1];
 }
 
-// TODO: rename this function
-void map_drawgrid(struct Map *map, const struct Camera *cam)
+void map_render(struct Map *map, const struct Camera *cam)
 {
-	float r = 80;
+	// If you change this, also change the shader in opengl_boilerplate.c
+	int r = 80;
 
 	int startxmin = get_section_start_coordinate(cam->location.x - r);
 	int startxmax = get_section_start_coordinate(cam->location.x + r);
@@ -382,7 +382,7 @@ void map_drawgrid(struct Map *map, const struct Camera *cam)
 	int nz = (startzmax - startzmin)/SECTION_SIZE + 1;
 	int nsections = nx*nz;
 
-	int maxsections = ((int)(2*r/SECTION_SIZE) + 2)*((int)(2*r/SECTION_SIZE) + 2);
+	int maxsections = ((2*r)/SECTION_SIZE + 2)*((2*r)/SECTION_SIZE + 2);
 	SDL_assert(nsections <= maxsections);
 
 	// need +2 because one extra section in each direction
@@ -400,6 +400,7 @@ void map_drawgrid(struct Map *map, const struct Camera *cam)
 	int i = 0;
 	for (int startx = startxmin; startx <= startxmax; startx += SECTION_SIZE) {
 		for (int startz = startzmin; startz <= startzmax; startz += SECTION_SIZE) {
+			// TODO: don't send all vertexdata to gpu, if same section still visible as last time?
 			struct Section *sect = find_or_add_section(map, startx, startz);
 			ensure_ytable_is_ready(map, sect);
 			glBufferSubData(GL_ARRAY_BUFFER, i++*sizeof(sect->vertexdata), sizeof(sect->vertexdata), sect->vertexdata);
@@ -430,6 +431,7 @@ struct Map *map_new(void)
 	return map;
 }
 
+// TODO: delete some of the opengl stuff?
 void map_destroy(struct Map *map)
 {
 	map->queue.quit = true;

@@ -41,7 +41,7 @@ int main(void)
 		glUniformMatrix3fv(
 			glGetUniformLocation(bpstate.programid, "world2cam"),
 			1, true, &cam.world2cam.rows[0][0]);
-		map_drawgrid(map, &cam);
+		map_render(map, &cam);
 		SDL_GL_SwapWindow(bpstate.window);
 
 		SDL_Event e;

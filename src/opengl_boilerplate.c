@@ -61,6 +61,7 @@ struct OpenglBoilerplateState opengl_boilerplate_init(void)
 	if (!ctx)
 		log_printf_abort("SDL_GL_CreateContext failed: %s", SDL_GetError());
 
+	// TODO: understand why exactly i need sdl2+glew+opengl
 	GLenum tmp;
 	if ((tmp = glewInit()) != GLEW_OK)
 		log_printf_abort("Error in glewInit(): %s", glewGetErrorString(tmp));
