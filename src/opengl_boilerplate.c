@@ -123,14 +123,6 @@ struct OpenglBoilerplateState opengl_boilerplate_init(void)
 	glDepthFunc(GL_GREATER);
 	glClearDepth(0);
 
-	// TODO: put these to map.c
-	/*
-	glGenBuffers(1, &vertex_buffer_object);
-	glBindBuffer(GL_ARRAY_BUFFER, vertex_buffer_object);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(vertex_data), vertex_data, GL_DYNAMIC_DRAW);
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-	*/
-
 	// TODO: understand what these do
 	GLuint vertarr;
 	glGenVertexArrays(1, &vertarr);

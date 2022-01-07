@@ -26,20 +26,6 @@ int main(void)
 		glClearColor(0, 0, 0, 0);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		map_drawgrid(map, &cam);
-		// TODO: update vertex data and display it
-		/*
-		vertex_data[2] -= 0.01f;
-
-		glBindBuffer(GL_ARRAY_BUFFER, vertex_buffer_object);
-		glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(vertex_data), vertex_data);
-
-		glEnableVertexAttribArray(0);
-		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
-		glDrawArrays(GL_TRIANGLES, 0, sizeof(vertex_data)/(3*sizeof(float)));
-
-		glDisableVertexAttribArray(0);
-		glBindBuffer(GL_ARRAY_BUFFER, 0);
-		*/
 
 		SDL_GL_SwapWindow(bpstate.window);
 
