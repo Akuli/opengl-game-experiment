@@ -7,7 +7,7 @@
 struct OpenglBoilerplateState {
 	SDL_Window *window;
 	SDL_GLContext *ctx;
-	GLint camloc_uniform;
+	GLuint programid;
 };
 
 struct OpenglBoilerplateState opengl_boilerplate_init(void);
