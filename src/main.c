@@ -25,7 +25,7 @@ int main(void)
 	while (1) {
 		glClearColor(0, 0, 0, 0);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
+		map_drawgrid(map, &cam);
 		// TODO: update vertex data and display it
 		/*
 		vertex_data[2] -= 0.01f;

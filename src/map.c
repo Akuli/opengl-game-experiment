@@ -1,12 +1,15 @@
 #include "map.h"
+#include <GL/glew.h>
+#include <SDL2/SDL.h>
+#include <math.h>
 #include "camera.h"
 #include "log.h"
-#include <math.h>
 
 #define min(x, y) ((x)<(y) ? (x) : (y))
 #define min4(a,b,c,d) min(min(a,b),min(c,d))
 
 #define SECTION_SIZE 40  // side length of section square on xz plane
+#define TRIANGLES_PER_SECTION (2*SECTION_SIZE*SECTION_SIZE)
 
 struct Section {
 	int startx, startz;
@@ -20,14 +23,19 @@ struct Section {
 
 	/*
 	ytable contains cached values for height of map, depending also on neighbor sections.
+
 	Raw version:
 		- contains enough values to cover neighbors too
 		- does not take in account neighbors
 		- is slow to compute
 		- is always ready to be used, even when ytableready is false
+
+	vertexdata is passed to the gpu for rendering, and represents triangles.
+	Don't use it (or ytable) until ytableready is true.
 	*/
 	float ytableraw[3*SECTION_SIZE + 1][3*SECTION_SIZE + 1];
 	float ytable[SECTION_SIZE + 1][SECTION_SIZE + 1];
+	GLfloat vertexdata[TRIANGLES_PER_SECTION][9];
 	bool ytableready;
 };
 
@@ -155,6 +163,8 @@ struct Map {
 
 	struct SectionQueue queue;
 	SDL_Thread *prepthread;
+
+	GLuint vbo;  // Vertex Buffer Object
 };
 
 static unsigned section_hash(int startx, int startz)
@@ -300,9 +310,43 @@ static void ensure_ytable_is_ready(struct Map *map, struct Section *sect)
 				int iz = zidx + SECTION_SIZE + zdiff;
 				y += (*s)->ytableraw[ix][iz];
 			}
+
 			sect->ytable[xidx][zidx] = y;
 		}
 	}
+
+	float (*ptr)[9] = sect->vertexdata;
+	for (int ix = 0; ix < SECTION_SIZE; ix++) {
+		for (int iz = 0; iz < SECTION_SIZE; iz++) {
+			if (ix==0 && iz==0) {
+				continue;
+			}
+			float triangle1[] = {
+				sect->startx + ix  , sect->ytable[ix  ][iz  ], sect->startz + iz  ,
+				sect->startx + ix+1, sect->ytable[ix+1][iz  ], sect->startz + iz  ,
+				sect->startx + ix  , sect->ytable[ix  ][iz+1], sect->startz + iz+1,
+			};
+			float triangle2[] = {
+				sect->startx + ix+1, sect->ytable[ix+1][iz+1], sect->startz + iz+1,
+				sect->startx + ix+1, sect->ytable[ix+1][iz  ], sect->startz + iz  ,
+				sect->startx + ix  , sect->ytable[ix  ][iz+1], sect->startz + iz+1,
+			};
+			memcpy(*ptr++, triangle1, sizeof triangle1);
+			memcpy(*ptr++, triangle2, sizeof triangle2);
+		}
+	}
+	GLfloat asd[] = {
+		0, 0, -1,
+		1, 1, -2,
+		-1, 2, -3,
+
+		0, 1, -1,
+		0.5, 1, -2,
+		-0.5, 1, -5,
+	};
+	memcpy(*ptr, asd, sizeof asd);
+	ptr += sizeof(asd)/sizeof(*ptr);
+	SDL_assert(ptr == sect->vertexdata + sizeof(sect->vertexdata)/sizeof(sect->vertexdata[0]));
 
 	sect->ytableready = true;
 }
@@ -337,6 +381,7 @@ float map_getheight(struct Map *map, float x, float z)
 		+ t*u*sect->ytable[ix+1][iz+1];
 }
 
+// TODO: rename this function
 void map_drawgrid(struct Map *map, const struct Camera *cam)
 {
 	float r = 50;
@@ -346,44 +391,43 @@ void map_drawgrid(struct Map *map, const struct Camera *cam)
 	int startzmin = get_section_start_coordinate(cam->location.z - r);
 	int startzmax = get_section_start_coordinate(cam->location.z + r);
 
-	// In x and z directions, need +2 (one extra in each direction) and +1 (both ends are inclusive)
-	make_room_for_more_sections(map, ((startxmax - startxmin)/SECTION_SIZE + 3)*((startzmax - startzmin)/SECTION_SIZE + 3));
+	// +1 because both ends inlusive
+	int nx = (startxmax - startxmin)/SECTION_SIZE + 1;
+	int nz = (startzmax - startzmin)/SECTION_SIZE + 1;
+	int nsections = nx*nz;
 
+	int maxsections = ((2*r) / SECTION_SIZE + 2)*((2*r) / SECTION_SIZE + 2);
+	SDL_assert(nsections <= maxsections);
+
+	// need +2 because one extra section in each direction
+	make_room_for_more_sections(map, (nx+2)*(nz+2));
+
+	if (map->vbo == 0) {
+		glGenBuffers(1, &map->vbo);
+		SDL_assert(map->vbo != 0);
+		glBindBuffer(GL_ARRAY_BUFFER, map->vbo);
+		glBufferData(GL_ARRAY_BUFFER, maxsections*sizeof(((struct Section*)NULL)->vertexdata), NULL, GL_DYNAMIC_DRAW);
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
+		log_printf("map vbo initialized");
+	}
+
+	glBindBuffer(GL_ARRAY_BUFFER, map->vbo);
+	int i = 0;
 	for (int startx = startxmin; startx <= startxmax; startx += SECTION_SIZE) {
 		for (int startz = startzmin; startz <= startzmax; startz += SECTION_SIZE) {
 			struct Section *sect = find_or_add_section(map, startx, startz);
 			ensure_ytable_is_ready(map, sect);
-			for (int ix = 0; ix < SECTION_SIZE; ix++) {
-				for (int iz = 0; iz < SECTION_SIZE; iz++) {
-					int x = sect->startx + ix;
-					int z = sect->startz + iz;
-					float dx = x - cam->location.x;
-					float dz = z - cam->location.z;
-
-					if (dx*dx + dz*dz < r*r
-						&& (dx+1)*(dx+1) + dz*dz < r*r
-						&& dx*dx + (dz+1)*(dz+1) < r*r
-						&& (dx+1)*(dx+1) + (dz+1)*(dz+1) < r*r)
-					{
-						float ratio = (dx*dx + dz*dz)/(r*r);
-						uint8_t brightness = (uint8_t)(255*expf(-7*ratio));
-						/*
-						camera_fill_triangle(cam, (Vec3[]){
-							{x,sect->ytable[ix][iz],z},
-							{x,sect->ytable[ix][iz+1],z+1},
-							{x+1,sect->ytable[ix+1][iz],z},
-						}, brightness,0,0);
-						camera_fill_triangle(cam, (Vec3[]){
-							{x+1,sect->ytable[ix+1][iz+1],z+1},
-							{x,sect->ytable[ix][iz+1],z+1},
-							{x+1,sect->ytable[ix+1][iz],z},
-						}, brightness,0,0);
-						*/
-					}
-				}
-			}
+			glBufferSubData(GL_ARRAY_BUFFER, i++*sizeof(sect->vertexdata), sizeof(sect->vertexdata), sect->vertexdata);
 		}
 	}
+	SDL_assert(i == nsections);
+
+	glEnableVertexAttribArray(0);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+	glDrawArrays(GL_TRIANGLES, 0, nsections*TRIANGLES_PER_SECTION);
+
+	glDisableVertexAttribArray(0);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
 struct Map *map_new(void)
