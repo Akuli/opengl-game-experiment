@@ -396,7 +396,7 @@ void map_drawgrid(struct Map *map, const struct Camera *cam)
 	int nz = (startzmax - startzmin)/SECTION_SIZE + 1;
 	int nsections = nx*nz;
 
-	int maxsections = ((2*r) / SECTION_SIZE + 2)*((2*r) / SECTION_SIZE + 2);
+	int maxsections = ((int)(2*r/SECTION_SIZE) + 2)*((int)(2*r/SECTION_SIZE) + 2);
 	SDL_assert(nsections <= maxsections);
 
 	// need +2 because one extra section in each direction
