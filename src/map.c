@@ -394,7 +394,6 @@ void map_drawgrid(struct Map *map, const struct Camera *cam)
 		glBindBuffer(GL_ARRAY_BUFFER, map->vbo);
 		glBufferData(GL_ARRAY_BUFFER, maxsections*sizeof(((struct Section*)NULL)->vertexdata), NULL, GL_DYNAMIC_DRAW);
 		glBindBuffer(GL_ARRAY_BUFFER, 0);
-		log_printf("map vbo initialized");
 	}
 
 	glBindBuffer(GL_ARRAY_BUFFER, map->vbo);
@@ -410,7 +409,7 @@ void map_drawgrid(struct Map *map, const struct Camera *cam)
 
 	glEnableVertexAttribArray(0);
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
-	glDrawArrays(GL_TRIANGLES, 0, nsections*TRIANGLES_PER_SECTION);
+	glDrawArrays(GL_TRIANGLES, 0, nsections*TRIANGLES_PER_SECTION*3);
 
 	glDisableVertexAttribArray(0);
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
