@@ -104,7 +104,7 @@ static void generate_section(struct Section *sect)
 				float xzscale = sect->mountains[i].xzscale;
 				y += sect->mountains[i].yscale * expf(-1/(xzscale*xzscale) * (dx*dx + dz*dz));
 			}
-			sect->ytableraw[xidx][zidx] = y;
+			sect->ytableraw[xidx][zidx] = y*0;
 		}
 	}
 }
