@@ -6,12 +6,15 @@
 typedef struct { float x, y; } Vec2;
 typedef struct { float x, y, z; } Vec3;
 typedef struct { int x, y, z; } iVec3;
+typedef struct { float rows[2][2]; } Mat2;
 typedef struct { float rows[3][3]; } Mat3;
 
+inline Vec2 vec2_add(Vec2 a, Vec2 b) { return (Vec2){a.x+b.x, a.y+b.y }; }
 inline Vec3 vec3_add(Vec3 a, Vec3 b) { return (Vec3){a.x+b.x, a.y+b.y, a.z+b.z }; }
 inline void vec3_add_inplace(Vec3 *a, Vec3 b) { a->x += b.x; a->y += b.y; a->z += b.z; }
 inline Vec2 vec2_sub(Vec2 a, Vec2 b) { return (Vec2){a.x-b.x, a.y-b.y }; }
 inline Vec3 vec3_sub(Vec3 a, Vec3 b) { return (Vec3){a.x-b.x, a.y-b.y, a.z-b.z }; }
+inline Vec2 vec2_mul_float(Vec2 v, float f) { return (Vec2){v.x*f, v.y*f}; }
 inline float vec2_dot(Vec2 a, Vec2 b) { return a.x*b.x + a.y*b.y; }
 inline float vec3_dot(Vec3 a, Vec3 b) { return a.x*b.x + a.y*b.y + a.z*b.z; }
 
@@ -25,11 +28,18 @@ inline float mat3_det(Mat3 M)
 		- M.rows[0][2]*M.rows[1][1]*M.rows[2][0];
 }
 
+inline Vec2 mat2_mul_vec2(Mat2 M, Vec2 v) { return (Vec2){
+	v.x*M.rows[0][0] + v.y*M.rows[0][1],
+	v.x*M.rows[1][0] + v.y*M.rows[1][1],
+};}
+
 inline Vec3 mat3_mul_vec3(Mat3 M, Vec3 v) { return (Vec3){
 	v.x*M.rows[0][0] + v.y*M.rows[0][1] + v.z*M.rows[0][2],
 	v.x*M.rows[1][0] + v.y*M.rows[1][1] + v.z*M.rows[1][2],
 	v.x*M.rows[2][0] + v.y*M.rows[2][1] + v.z*M.rows[2][2],
 };}
+
+Mat2 mat2_rotation(float angle);
 
 /*
 Slow-ish to compute because uses trig funcs, so don't call this in a loop.

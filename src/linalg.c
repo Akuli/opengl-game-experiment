@@ -1,15 +1,28 @@
 #include <math.h>
 #include "linalg.h"
 
+extern inline Vec2 vec2_add(Vec2 a, Vec2 b);
 extern inline Vec3 vec3_add(Vec3 a, Vec3 b);
 extern inline void vec3_add_inplace(Vec3 *a, Vec3 b);
 extern inline Vec2 vec2_sub(Vec2 a, Vec2 b);
 extern inline Vec3 vec3_sub(Vec3 a, Vec3 b);
+extern inline Vec2 vec2_mul_float(Vec2 v, float f);
 extern inline float vec2_dot(Vec2 a, Vec2 b);
 extern inline float vec3_dot(Vec3 a, Vec3 b);
 extern inline float mat3_det(Mat3 M);
+extern inline Vec2 mat2_mul_vec2(Mat2 M, Vec2 v);
 extern inline Vec3 mat3_mul_vec3(Mat3 M, Vec3 v);
 extern inline bool plane_whichside(const struct Plane pl, Vec3 v);
+
+Mat2 mat2_rotation(float angle)
+{
+	float cos = cosf(angle);
+	float sin = sinf(angle);
+	return (Mat2){ .rows = {
+		{ cos, -sin },
+		{ sin, cos  },
+	}};
+}
 
 Mat3 mat3_rotation_xz(float angle)
 {
