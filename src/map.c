@@ -4,6 +4,7 @@
 #include <math.h>
 #include "camera.h"
 #include "log.h"
+#include "opengl_boilerplate.h"
 
 #define min(x, y) ((x)<(y) ? (x) : (y))
 #define min4(a,b,c,d) min(min(a,b),min(c,d))
@@ -164,6 +165,7 @@ struct Map {
 	struct SectionQueue queue;
 	SDL_Thread *prepthread;
 
+	GLuint shaderprogram;
 	GLuint vbo;  // Vertex Buffer Object, represents triangles going to gpu
 };
 
@@ -369,6 +371,14 @@ float map_getheight(struct Map *map, float x, float z)
 
 void map_render(struct Map *map, const struct Camera *cam)
 {
+	glUseProgram(map->shaderprogram);
+	glUniform3f(
+		glGetUniformLocation(map->shaderprogram, "cameraLocation"),
+		cam->location.x, cam->location.y, cam->location.z);
+	glUniformMatrix3fv(
+		glGetUniformLocation(map->shaderprogram, "world2cam"),
+		1, true, &cam->world2cam.rows[0][0]);
+
 	// If you change this, also change the shader in opengl_boilerplate.c
 	int r = 80;
 
@@ -414,6 +424,7 @@ void map_render(struct Map *map, const struct Camera *cam)
 
 	glDisableVertexAttribArray(0);
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	glUseProgram(0);
 }
 
 struct Map *map_new(void)
@@ -427,6 +438,43 @@ struct Map *map_new(void)
 
 	map->prepthread = SDL_CreateThread(section_preparing_thread, "NameOfTheMapSectionGeneratorThread", &map->queue);
 	SDL_assert(map->prepthread);
+
+	const char *vertex_shader =
+		"#version 330\n"
+		"\n"
+		"layout(location = 0) in vec3 position;\n"
+		"uniform vec3 cameraLocation;\n"
+		"uniform mat3 world2cam;\n"
+		"smooth out vec4 vertexToFragmentColor;\n"
+		"\n"
+		"void main(void)\n"
+		"{\n"
+		"    vec3 pos = world2cam*(position - cameraLocation);\n"
+		"    // Other components of (x,y,z,w) will be implicitly divided by w\n"
+		"    // Resulting z will be used in z-buffer\n"
+		"    gl_Position = vec4(pos.x, pos.y, 1, -pos.z);\n"
+		"\n"
+		"    vec3 rgb = vec3(\n"
+		"        pow(0.5 + atan((position.y + 5)/10)/3.1415, 2),\n"
+		"        0.5*(0.5 + atan(position.y/10)/3.1415),\n"
+		"        0.5 - atan(position.y/10)/3.1415\n"
+		"    );\n"
+		"    vertexToFragmentColor.xyz = rgb * exp(-0.0003*pow(30+length(pos),2));\n"
+		"    vertexToFragmentColor.w = 1;\n"
+		"}\n"
+		;
+	const char *fragment_shader =
+		"#version 330\n"
+		"\n"
+		"smooth in vec4 vertexToFragmentColor;\n"
+		"out vec4 outColor;\n"
+		"\n"
+		"void main(void)\n"
+		"{\n"
+		"    outColor = vertexToFragmentColor;\n"
+		"}\n"
+		;
+	map->shaderprogram = opengl_boilerplate_create_shader_program(vertex_shader, fragment_shader);
 
 	return map;
 }

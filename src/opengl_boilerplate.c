@@ -41,6 +41,23 @@ static void link_program(GLuint prog)
 	}
 }
 
+GLuint opengl_boilerplate_create_shader_program(const char *vertex_shader, const char *fragment_shader)
+{
+	GLuint prog = glCreateProgram();
+
+	GLuint vs = create_shader(GL_VERTEX_SHADER, vertex_shader, "vertex_shader");
+	GLuint fs = create_shader(GL_FRAGMENT_SHADER, fragment_shader, "fragment_shader");
+	glAttachShader(prog, vs);
+	glAttachShader(prog, fs);
+	link_program(prog);
+	glDetachShader(prog, vs);
+	glDetachShader(prog, fs);
+	glDeleteShader(vs);
+	glDeleteShader(fs);
+
+	return prog;
+}
+
 struct OpenglBoilerplateState opengl_boilerplate_init(void)
 {
 	SDL_assert(SDL_Init(SDL_INIT_VIDEO) == 0);
@@ -72,60 +89,6 @@ struct OpenglBoilerplateState opengl_boilerplate_init(void)
 	if (ret != 0)
 		log_printf("SDL_GL_SetSwapInterval failed: %s", SDL_GetError());
 
-	// Run once for each vertex (corner of triangle)
-	const char *vertex_shader =
-		"#version 330\n"
-		"\n"
-		"layout(location = 0) in vec3 position;\n"
-		"uniform vec3 cameraLocation;\n"
-		"uniform mat3 world2cam;\n"
-		"smooth out vec4 vertexToFragmentColor;\n"
-		"\n"
-		"void main(void)\n"
-		"{\n"
-		"    vec3 pos = world2cam*(position - cameraLocation);\n"
-		"    // Other components of (x,y,z,w) will be implicitly divided by w\n"
-		"    // Resulting z will be used in z-buffer\n"
-		"    gl_Position = vec4(pos.x, pos.y, 1, -pos.z);\n"
-		"\n"
-		"    vec3 rgb = vec3(\n"
-		"        pow(0.5 + atan((position.y + 5)/10)/3.1415, 2),\n"
-		"        0.5*(0.5 + atan(position.y/10)/3.1415),\n"
-		"        0.5 - atan(position.y/10)/3.1415\n"
-		"    );\n"
-		"    vertexToFragmentColor.xyz = rgb * exp(-0.0003*pow(30+length(pos),2));\n"
-		"    vertexToFragmentColor.w = 1;\n"
-		"}\n"
-		;
-
-	// Run once for each drawn pixel
-	const char *fragment_shader =
-		"#version 330\n"
-		"\n"
-		"smooth in vec4 vertexToFragmentColor;\n"
-		"out vec4 outColor;\n"
-		"\n"
-		"void main(void)\n"
-		"{\n"
-		"    outColor = vertexToFragmentColor;\n"
-		"}\n"
-		;
-
-	GLuint prog = glCreateProgram();
-
-	GLuint shaders[] = {
-		create_shader(GL_VERTEX_SHADER, vertex_shader, "vertex_shader"),
-		create_shader(GL_FRAGMENT_SHADER, fragment_shader, "fragment_shader"),
-	};
-	for (int i = 0; i < sizeof(shaders)/sizeof(shaders[0]); i++)
-		glAttachShader(prog, shaders[i]);
-	link_program(prog);
-	for (int i = 0; i < sizeof(shaders)/sizeof(shaders[0]); i++)
-		glDetachShader(prog, shaders[i]);
-	for (int i = 0; i < sizeof(shaders)/sizeof(shaders[0]); i++)
-		glDeleteShader(shaders[i]);
-
-	glUseProgram(prog);
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_GREATER);
 	glClearDepth(0);
@@ -137,11 +100,7 @@ struct OpenglBoilerplateState opengl_boilerplate_init(void)
 
 	glViewport(0, 0, CAMERA_SCREEN_WIDTH, CAMERA_SCREEN_HEIGHT);
 
-	return (struct OpenglBoilerplateState){
-		.window = wnd,
-		.ctx = ctx,
-		.programid = prog,
-	};
+	return (struct OpenglBoilerplateState){ .window = wnd, .ctx = ctx };
 }
 
 void opengl_boilerplate_quit(const struct OpenglBoilerplateState *state)

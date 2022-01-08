@@ -7,10 +7,10 @@
 struct OpenglBoilerplateState {
 	SDL_Window *window;
 	SDL_GLContext *ctx;
-	GLuint programid;
 };
 
 struct OpenglBoilerplateState opengl_boilerplate_init(void);
+GLuint opengl_boilerplate_create_shader_program(const char *vertex_shader, const char *fragment_shader);
 void opengl_boilerplate_quit(const struct OpenglBoilerplateState *state);
 
 #endif

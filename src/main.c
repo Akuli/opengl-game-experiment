@@ -13,10 +13,10 @@ int main(void)
 {
 	srand(time(NULL));
 
+	struct OpenglBoilerplateState bpstate = opengl_boilerplate_init();
+
 	struct Map *map = map_new();
 	struct Camera cam = {0};
-
-	struct OpenglBoilerplateState bpstate = opengl_boilerplate_init();
 
 	int zdir = 0;
 	int angledir = 0;
@@ -35,12 +35,6 @@ int main(void)
 		glClearColor(0, 0, 0, 0);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		glUniform3f(
-			glGetUniformLocation(bpstate.programid, "cameraLocation"),
-			cam.location.x, cam.location.y, cam.location.z);
-		glUniformMatrix3fv(
-			glGetUniformLocation(bpstate.programid, "world2cam"),
-			1, true, &cam.world2cam.rows[0][0]);
 		map_render(map, &cam);
 		SDL_GL_SwapWindow(bpstate.window);
 
