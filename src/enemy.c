@@ -34,7 +34,6 @@ static void create_arc_in_3d(float (*vertexdata)[12], int *ntriangles, Vec2 uppe
 
 	// Connect with triangles
 	for (int i = 0; i < n-1; i++) {
-		Vec3 a = arcpoints1[i];
 		float triangle1[] = {
 			arcpoints1[i].x, arcpoints1[i].y, arcpoints1[i].z, i/(float)(n-1),
 			arcpoints2[i].x, arcpoints2[i].y, arcpoints2[i].z, i/(float)(n-1),
@@ -48,6 +47,7 @@ static void create_arc_in_3d(float (*vertexdata)[12], int *ntriangles, Vec2 uppe
 		memcpy(vertexdata[(*ntriangles)++], triangle1, sizeof triangle1);
 		memcpy(vertexdata[(*ntriangles)++], triangle2, sizeof triangle2);
 	}
+#undef n
 }
 
 void enemy_render(struct Enemy *enemy, const struct Camera *cam)
