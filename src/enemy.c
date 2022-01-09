@@ -132,17 +132,9 @@ void enemy_render(struct Enemy *enemy, const struct Camera *cam)
 	int ntriangles = 0;
 
 	float pi = acosf(-1);
-	int n = 5;
+	int n = 5;  // number of turns around y axis
 	float dt = 0.05f / n;
 
-	/*
-	Spiral equation, when viewed from the side, with x axis spinning about the z axis:
-
-		0 <= x <= 1
-		y = quadratic function of x, chosen with experimentation
-
-	The spinning speed is constant, chosen so that we do a total of n turns as t grows.
-	*/
 #define outer_shape_in_2d(t) ((vec2){ (t), 2 - (t) - (t)*(t) })
 	for (float t = 0; t < 1; t += dt) {
 		create_arc_in_3d(
