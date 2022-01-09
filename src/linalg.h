@@ -15,6 +15,7 @@ inline void vec3_add_inplace(Vec3 *a, Vec3 b) { a->x += b.x; a->y += b.y; a->z +
 inline Vec2 vec2_sub(Vec2 a, Vec2 b) { return (Vec2){a.x-b.x, a.y-b.y }; }
 inline Vec3 vec3_sub(Vec3 a, Vec3 b) { return (Vec3){a.x-b.x, a.y-b.y, a.z-b.z }; }
 inline Vec2 vec2_mul_float(Vec2 v, float f) { return (Vec2){v.x*f, v.y*f}; }
+inline Vec3 vec3_mul_float(Vec3 v, float f) { return (Vec3){v.x*f, v.y*f, v.z*f}; }
 inline float vec2_dot(Vec2 a, Vec2 b) { return a.x*b.x + a.y*b.y; }
 inline float vec3_dot(Vec3 a, Vec3 b) { return a.x*b.x + a.y*b.y + a.z*b.z; }
 
