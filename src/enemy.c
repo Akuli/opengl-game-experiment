@@ -17,7 +17,7 @@ struct Enemy {
 // Create equally spaced points on outer arc connecting two points in 2D
 static void create_arc_points(vec2 *res, vec2 upper, vec2 lower)
 {
-	vec2 center = vec2_mul_float(vec2_add(upper, lower), 0.5f);
+	vec2 center = vec2_lerp(upper, lower, 0.5f);
 	vec2 center2upper = vec2_sub(upper, center);
 	float pi = acosf(-1);
 	for (int i = 0; i < N_ARC_POINTS; i++)
@@ -56,8 +56,8 @@ static void add_triangle_clipped_above_xz_plane(vec4 (*vertexdata)[3], int *ntri
 	if (triangle[1].y < 0) {
 		// 1 corner above, 2 below. Slide bottom 2 corners up along the sides of triangle.
 		for (int i = 0; i < 2; i++) {
-			float t = triangle[i].y / (triangle[i].y - triangle[2].y);
-			vec4_add_inplace(&triangle[i], vec4_mul_float(vec4_sub(triangle[2], triangle[i]), t));
+			float t = unlerp(triangle[i].y, triangle[2].y, 0);
+			triangle[i] = vec4_lerp(triangle[i], triangle[2], t);
 		}
 		memcpy(&vertexdata[(*ntriangles)++], triangle, sizeof triangle);
 	} else {
@@ -74,8 +74,8 @@ static void add_triangle_clipped_above_xz_plane(vec4 (*vertexdata)[3], int *ntri
 			          \    /
 			       triangle[0]
 		*/
-		vec4 bot1 = vec4_sub(triangle[1], vec4_mul_float(vec4_sub(triangle[0],triangle[1]), triangle[1].y/(triangle[0].y-triangle[1].y)));
-		vec4 bot2 = vec4_sub(triangle[2], vec4_mul_float(vec4_sub(triangle[0],triangle[2]), triangle[2].y/(triangle[0].y-triangle[2].y)));
+		vec4 bot1 = vec4_lerp(triangle[0], triangle[1], unlerp(triangle[0].y, triangle[1].y, 0));
+		vec4 bot2 = vec4_lerp(triangle[0], triangle[2], unlerp(triangle[0].y, triangle[2].y, 0));
 		vec4 triangle1[] = { triangle[1], triangle[2], bot1 };
 		vec4 triangle2[] = { triangle[2], bot1, bot2 };
 		memcpy(&vertexdata[(*ntriangles)++], triangle1, sizeof triangle1);
@@ -136,7 +136,8 @@ void enemy_render(struct Enemy *enemy, const struct Camera *cam)
 	float dt = 0.05f / n;
 
 #define outer_shape_in_2d(t) ((vec2){ (t), 2 - (t) - (t)*(t) })
-	for (float t = 0; t < 1; t += dt) {
+	// Min value of t tweaked so that the tip of enemy looks good
+	for (float t = -0.1f; t < 1; t += dt) {
 		create_arc_in_3d(
 			vertexdata, &ntriangles,
 			outer_shape_in_2d(t), outer_shape_in_2d(t+1.0f/n), n*2*pi*t,
