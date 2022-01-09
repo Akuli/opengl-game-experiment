@@ -31,7 +31,7 @@ int main(void)
 		cam.world2cam = mat3_rotation_xz(-angle);
 
 		// FIXME: move amount should depend on fps
-		vec3_add_inplace(&cam.location, mat3_mul_vec3(cam.cam2world, (Vec3){0,0,0.3f*zdir}));
+		vec3_add_inplace(&cam.location, mat3_mul_vec3(cam.cam2world, (vec3){0,0,0.3f*zdir}));
 		cam.location.y = map_getheight(map, cam.location.x, cam.location.z) + 5;
 
 		glClearColor(0, 0, 0, 0);
