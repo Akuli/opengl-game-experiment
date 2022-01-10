@@ -15,24 +15,12 @@ struct Enemy {
 
 static vec4 point_on_surface(float t, float u)
 {
-	int n = 5;  // How many "layers" should the poo have
-	float pi = acosf(-1);
-	float angle = n*2*pi*t;
-	float colorval = u/pi;
-
-#define y(t) (2-(t)-(t)*(t))
-	vec2 arccenter = { t + 0.5f/n, (y(t)+y(t+1.0f/n))/2 };
-	vec2 arcdiff = { -0.5f/n, (y(t)-y(t+1.0f/n))/2 };
-#undef y
-
-	vec2 arcpoint = vec2_add(arccenter, mat2_mul_vec2(mat2_rotation(-u), arcdiff));
-	vec3 arcpoint3d = mat3_mul_vec3(mat3_rotation_xz(angle), (vec3){ arcpoint.x, arcpoint.y, 0 });
-	return (vec4){ arcpoint3d.x, arcpoint3d.y, arcpoint3d.z, colorval };
+	return (vec4){ u*cosf(t), 2*(1 - u*u) + u*u*u*0.2f*(1+sinf(10*t)), u*sinf(t), u };
 }
 
 static vec4 *get_vertex_data(int *npoints)
 {
-#define TSTEPS 110
+#define TSTEPS 150
 #define USTEPS 10
 	// *4 because a rectangle is represented as 2 triangles, and clipping can split each one in half
 	static vec4 vertexdata[TSTEPS*USTEPS*4][3];
@@ -46,10 +34,10 @@ static vec4 *get_vertex_data(int *npoints)
 		for (int tstep = 0; tstep < TSTEPS; tstep++) {
 			for (int ustep = 0; ustep < USTEPS; ustep++) {
 				// Min value of t tweaked so that the tip of enemy looks good
-				float t1 = lerp(-0.1f, 1, tstep/(float)TSTEPS);
-				float t2 = lerp(-0.1f, 1, (tstep+1)/(float)TSTEPS);
-				float u1 = lerp(0, pi, ustep/(float)USTEPS);
-				float u2 = lerp(0, pi, (ustep+1)/(float)USTEPS);
+				float t1 = lerp(0, 2*pi, tstep/(float)TSTEPS);
+				float t2 = lerp(0, 2*pi, (tstep+1)/(float)TSTEPS);
+				float u1 = lerp(0, 1, ustep/(float)USTEPS);
+				float u2 = lerp(0, 1, (ustep+1)/(float)USTEPS);
 #undef TSTEPS
 #undef USTEPS
 
@@ -136,7 +124,7 @@ struct Enemy *enemy_new(void)
 		"    // Resulting z will be used in z-buffer\n"
 		"    gl_Position = vec4(pos.x, pos.y, 1, -pos.z);\n"
 		"\n"
-		"    vertexToFragmentColor.xyz = mix(vec3(0.5,0.25,0), vec3(0.2,0.1,0), positionAndColor.w);\n"
+		"    vertexToFragmentColor.xyz = vec3(1,0,1)*mix(0.1, 0.4, 1-positionAndColor.w);\n"
 		"    vertexToFragmentColor.w = 1;\n"
 		"}\n"
 		;
