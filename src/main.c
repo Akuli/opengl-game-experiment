@@ -17,7 +17,7 @@ int main(void)
 	struct OpenglBoilerplateState bpstate = opengl_boilerplate_init();
 
 	struct Map *map = map_new();
-	struct Enemy *en = enemy_new();
+	struct Enemy en = enemy_new();
 	struct Camera cam = {0};
 
 	int zdir = 0;
@@ -38,12 +38,14 @@ int main(void)
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		map_render(map, &cam);
-		enemy_render(en, &cam, map);
+		enemy_render(&en, &cam, map);
 		SDL_GL_SwapWindow(bpstate.window);
 
 		SDL_Event e;
 		while (SDL_PollEvent(&e)) switch(e.type) {
 			case SDL_QUIT:
+				map_destroy(map);
+				enemy_destroy(&en);
 				opengl_boilerplate_quit(&bpstate);
 				return 0;
 

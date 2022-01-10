@@ -8,11 +8,6 @@
 #include "map.h"
 #include "opengl_boilerplate.h"
 
-struct Enemy {
-	GLuint shaderprogram;
-	GLuint vbo;  // Vertex Buffer Object, represents triangles going to gpu
-};
-
 static vec4 point_on_surface(float t, float u)
 {
 	return (vec4){ u*cosf(t), 2*(1 - u*u) + u*u*u*0.2f*(1+sinf(10*t)), u*sinf(t), u };
@@ -69,7 +64,7 @@ static vec4 *get_vertex_data(int *npoints)
 	return &vertexdata[0][0];
 }
 
-void enemy_render(struct Enemy *enemy, const struct Camera *cam, struct Map *map)
+void enemy_render(const struct Enemy *enemy, const struct Camera *cam, struct Map *map)
 {
 	glUseProgram(enemy->shaderprogram);
 
@@ -84,17 +79,6 @@ void enemy_render(struct Enemy *enemy, const struct Camera *cam, struct Map *map
 		glGetUniformLocation(enemy->shaderprogram, "mapRotation"),
 		1, true, &map_get_rotation(map, 0, 0).rows[0][0]);
 
-	if (enemy->vbo == 0) {
-		int npoints;
-		vec4 *vertexdata = get_vertex_data(&npoints);
-
-		glGenBuffers(1, &enemy->vbo);
-		SDL_assert(enemy->vbo != 0);
-		glBindBuffer(GL_ARRAY_BUFFER, enemy->vbo);
-		glBufferData(GL_ARRAY_BUFFER, sizeof(vec4)*npoints, vertexdata, GL_DYNAMIC_DRAW);
-		glBindBuffer(GL_ARRAY_BUFFER, 0);
-	}
-
 	int npoints;
 	get_vertex_data(&npoints);
 
@@ -107,11 +91,9 @@ void enemy_render(struct Enemy *enemy, const struct Camera *cam, struct Map *map
 	glUseProgram(0);
 }
 
-struct Enemy *enemy_new(void)
+struct Enemy enemy_new(void)
 {
-	struct Enemy *enemy = malloc(sizeof(*enemy));
-	SDL_assert(enemy);
-	memset(enemy, 0, sizeof *enemy);
+	struct Enemy enemy = {0};
 
 	const char *vertex_shader =
 		"#version 330\n"
@@ -131,13 +113,21 @@ struct Enemy *enemy_new(void)
 		"    vertexToFragmentColor = darkerAtDistance(vec3(1,0,1)*mix(0.1, 0.4, 1-positionAndColor.w), pos);\n"
 		"}\n"
 		;
-	enemy->shaderprogram = opengl_boilerplate_create_shader_program(vertex_shader, NULL);
+	enemy.shaderprogram = opengl_boilerplate_create_shader_program(vertex_shader, NULL);
+
+	int npoints;
+	vec4 *vertexdata = get_vertex_data(&npoints);
+
+	glGenBuffers(1, &enemy.vbo);
+	SDL_assert(enemy.vbo != 0);
+	glBindBuffer(GL_ARRAY_BUFFER, enemy.vbo);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(vec4)*npoints, vertexdata, GL_DYNAMIC_DRAW);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
 
 	return enemy;
 }
 
-// TODO: delete some of the opengl stuff?
-void enemy_destroy(struct Enemy *enemy)
+void enemy_destroy(const struct Enemy *enemy)
 {
-	free(enemy);
+	// TODO: delete some of the opengl stuff?
 }
