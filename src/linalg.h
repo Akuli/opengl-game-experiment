@@ -40,6 +40,7 @@ inline vec4 vec4_lerp(vec4 a, vec4 b, float t) { return vec4_add(a, vec4_mul_flo
 inline float unlerp(float a, float b, float lerped) { return (lerped-a)/(b-a); }
 inline float vec2_dot(vec2 a, vec2 b) { return a.x*b.x + a.y*b.y; }
 inline float vec3_dot(vec3 a, vec3 b) { return a.x*b.x + a.y*b.y + a.z*b.z; }
+inline float vec4_dot(vec4 a, vec4 b) { return a.x*b.x + a.y*b.y + a.z*b.z + a.w*b.w; }
 
 inline float mat3_det(mat3 M)
 {
@@ -93,5 +94,13 @@ inline bool plane_whichside(const struct Plane pl, vec3 v)
 {
 	return vec3_dot(pl.normal, v) > pl.constant;
 }
+
+/*
+Take the part of the triangle that is on positive (plane_whichside returns true) side of plane.
+Number of resulting triangles is 0, 1 or 2, and that is returned.
+Resulting triangle corners (0, 3 or 6) are stored in res.
+Fourth component of triangles is linear interpolated, useful for coloring etc.
+*/
+int plane_clip_triangle(const struct Plane pl, const vec4 *corners, vec4 (*res)[3]);
 
 #endif

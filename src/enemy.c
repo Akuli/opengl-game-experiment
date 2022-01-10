@@ -24,65 +24,6 @@ static void create_arc_points(vec2 *res, vec2 upper, vec2 lower)
 		res[i] = vec2_add(center, mat2_mul_vec2(mat2_rotation(-i*pi/(N_ARC_POINTS-1)), center2upper));
 }
 
-static void swap_vec4s(vec4 *a, vec4 *b)
-{
-	vec4 tmp = *a;
-	*a = *b;
-	*b = tmp;
-}
-
-// triangle contains 12 floats, x,y,z,color for each vertex
-static void add_triangle_clipped_above_xz_plane(vec4 (*vertexdata)[3], int *ntriangles, const vec4 *newvertexdata)
-{
-	vec4 triangle[3];
-	memcpy(triangle, newvertexdata, sizeof triangle);
-
-	// Sort by y, lowest first
-	if (triangle[1].y < triangle[0].y) swap_vec4s(&triangle[1], &triangle[0]);
-	if (triangle[2].y < triangle[1].y) swap_vec4s(&triangle[2], &triangle[1]);
-	if (triangle[1].y < triangle[0].y) swap_vec4s(&triangle[1], &triangle[0]);
-	SDL_assert(triangle[0].y <= triangle[1].y && triangle[1].y <= triangle[2].y);
-
-	if (triangle[2].y <= 0) {
-		// all below
-		return;
-	}
-	if (triangle[0].y >= 0) {
-		// all above
-		memcpy(&vertexdata[(*ntriangles)++], triangle, sizeof triangle);
-		return;
-	}
-
-	if (triangle[1].y < 0) {
-		// 1 corner above, 2 below. Slide bottom 2 corners up along the sides of triangle.
-		for (int i = 0; i < 2; i++) {
-			float t = unlerp(triangle[i].y, triangle[2].y, 0);
-			triangle[i] = vec4_lerp(triangle[i], triangle[2], t);
-		}
-		memcpy(&vertexdata[(*ntriangles)++], triangle, sizeof triangle);
-	} else {
-		/*
-		2 corners above, 1 below. Split into two triangles
-
-			triangle[1]       triangle[2]
-                \             .-'/
-                 \         .-'  /
-                  \     .-'    /
-                   \ .-'      /
-			---------------------------------- y=0
-			         \      /
-			          \    /
-			       triangle[0]
-		*/
-		vec4 bot1 = vec4_lerp(triangle[0], triangle[1], unlerp(triangle[0].y, triangle[1].y, 0));
-		vec4 bot2 = vec4_lerp(triangle[0], triangle[2], unlerp(triangle[0].y, triangle[2].y, 0));
-		vec4 triangle1[] = { triangle[1], triangle[2], bot1 };
-		vec4 triangle2[] = { triangle[2], bot1, bot2 };
-		memcpy(&vertexdata[(*ntriangles)++], triangle1, sizeof triangle1);
-		memcpy(&vertexdata[(*ntriangles)++], triangle2, sizeof triangle2);
-	}
-}
-
 static void create_arc_in_3d(
 	vec4 (*vertexdata)[3], int *ntriangles,
 	vec2 upper1, vec2 lower1, float angle1,
@@ -113,8 +54,9 @@ static void create_arc_in_3d(
 			{ arcpoints2[i].x, arcpoints2[i].y, arcpoints2[i].z, i/(float)(N_ARC_POINTS-1) },
 			{ arcpoints1[i+1].x, arcpoints1[i+1].y, arcpoints1[i+1].z, (i+1)/(float)(N_ARC_POINTS-1) },
 		};
-		add_triangle_clipped_above_xz_plane(vertexdata, ntriangles, triangle1);
-		add_triangle_clipped_above_xz_plane(vertexdata, ntriangles, triangle2);
+
+		*ntriangles += plane_clip_triangle((struct Plane){.normal.y=1}, triangle1, &vertexdata[*ntriangles]);
+		*ntriangles += plane_clip_triangle((struct Plane){.normal.y=1}, triangle2, &vertexdata[*ntriangles]);
 	}
 }
 

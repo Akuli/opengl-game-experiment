@@ -1,4 +1,6 @@
 #include <math.h>
+#include <string.h>
+#include <SDL2/SDL.h>
 #include "linalg.h"
 
 extern inline vec2 vec2_add(vec2 a, vec2 b);
@@ -24,6 +26,7 @@ extern inline vec4 vec4_lerp(vec4 a, vec4 b, float t);
 extern inline float unlerp(float a, float b, float lerped);
 extern inline float vec2_dot(vec2 a, vec2 b);
 extern inline float vec3_dot(vec3 a, vec3 b);
+extern inline float vec4_dot(vec4 a, vec4 b);
 extern inline float mat3_det(mat3 M);
 extern inline vec2 mat2_mul_vec2(mat2 M, vec2 v);
 extern inline vec3 mat3_mul_vec3(mat3 M, vec3 v);
@@ -107,4 +110,63 @@ void plane_apply_mat3_INVERSE(struct Plane *pl, mat3 inverse)
 void plane_move(struct Plane *pl, vec3 mv)
 {
 	pl->constant += vec3_dot(pl->normal, mv);
+}
+
+static void swap4(vec4 *a, vec4 *b)
+{
+	vec4 tmp = *a;
+	*a = *b;
+	*b = tmp;
+}
+
+int plane_clip_triangle(const struct Plane pl, const vec4 *corners, vec4 (*res)[3])
+{
+	vec4 n = { pl.normal.x, pl.normal.y, pl.normal.z, 0 };
+
+	// sort corners by their dot product with plane: dot(a,n) <= dot(b,n) <= dot(c,n)
+	vec4 a = corners[0];
+	vec4 b = corners[1];
+	vec4 c = corners[2];
+	if (vec4_dot(a, n) > vec4_dot(b, n)) swap4(&a, &b);
+	if (vec4_dot(b, n) > vec4_dot(c, n)) swap4(&b, &c);
+	if (vec4_dot(a, n) > vec4_dot(b, n)) swap4(&a, &b);
+	SDL_assert(vec4_dot(a,n) <= vec4_dot(b,n) && vec4_dot(b,n) <= vec4_dot(c,n));
+
+	if (vec4_dot(c,n) <= pl.constant) {
+		// all corners on negative side
+		return 0;
+	}
+	if (vec4_dot(a,n) >= pl.constant) {
+		// all corners on positive side
+		res[0][0] = a; res[0][1] = b; res[0][2] = c;
+		return 1;
+	}
+
+	if (vec4_dot(b,n) < pl.constant) {
+		// c corner on positive side, a and b on negative. Move a and b so they touch plane.
+		a = vec4_lerp(a, c, unlerp(vec4_dot(a,n), vec4_dot(c,n), pl.constant));
+		b = vec4_lerp(b, c, unlerp(vec4_dot(b,n), vec4_dot(c,n), pl.constant));
+		res[0][0] = a; res[0][1] = b; res[0][2] = c;
+		return 1;
+	}
+
+	/*
+	b and c on positive side, a on negative. Split into two triangles.
+
+	   b --------------- c
+	    \            .-'/
+	     \        .-'  /
+	      \    .-'    /
+	       \.-'      /                   +++
+	  ----blerp---clerp---------------- plane
+	         \     /                     ---
+	          \   /
+	           \ /
+	            a
+	*/
+	vec4 blerp = vec4_lerp(a, b, unlerp(vec4_dot(a,n), vec4_dot(b,n), pl.constant));
+	vec4 clerp = vec4_lerp(a, c, unlerp(vec4_dot(a,n), vec4_dot(c,n), pl.constant));
+	res[0][0] = blerp; res[0][1] = clerp; res[0][2] = c;
+	res[1][0] = blerp; res[1][1] = b    ; res[1][2] = c;
+	return 2;
 }
