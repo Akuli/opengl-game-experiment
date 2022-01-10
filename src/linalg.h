@@ -2,7 +2,6 @@
 #define LINALG_H
 
 #include <assert.h>
-#include <math.h>
 #include <stdbool.h>
 
 typedef struct { float x, y; } vec2;

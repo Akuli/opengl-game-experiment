@@ -1,12 +1,11 @@
 #include <GL/glew.h>
 #include <SDL2/SDL.h>
 #include <stdio.h>
-#include <stdint.h>
+#include <stdlib.h>
 #include <time.h>
 #include "map.h"
 #include "camera.h"
 #include "linalg.h"
-#include "log.h"
 #include "opengl_boilerplate.h"
 #include "enemy.h"
 

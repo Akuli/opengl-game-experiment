@@ -2,8 +2,9 @@
 #define MAP_H
 
 #include "camera.h"
+#include "linalg.h"
 
-struct Map;
+struct Map;  // IWYU pragma: keep
 
 struct Map *map_new(void);
 void map_destroy(struct Map *map);

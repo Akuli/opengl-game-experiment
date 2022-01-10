@@ -2,9 +2,10 @@
 #include <GL/glew.h>
 #include <SDL2/SDL.h>
 #include <math.h>
-#include "assert.h"
+#include <stdbool.h>
+#include <stddef.h>
 #include "camera.h"
-#include "log.h"
+#include "linalg.h"
 #include "map.h"
 #include "opengl_boilerplate.h"
 
