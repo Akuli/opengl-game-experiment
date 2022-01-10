@@ -1,4 +1,4 @@
-# My first OpenGL project
+# My first OpenGL game
 
 ![here it is running](screenshot.png)
 
@@ -9,6 +9,7 @@ Running the game:
 
 	$ sudo apt install git gcc make libsdl2-dev libglew-dev
 	$ git clone https://github.com/Akuli/opengl-game-experiment
+	$ cd opengl-game-experiment
 	$ make -j2
 	$ ./game
 
