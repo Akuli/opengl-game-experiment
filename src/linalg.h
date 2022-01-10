@@ -101,12 +101,4 @@ inline bool plane_whichside(const struct Plane pl, vec3 v)
 	return vec3_dot(pl.normal, v) > pl.constant;
 }
 
-/*
-Take the part of the triangle that is on positive (plane_whichside returns true) side of plane.
-Number of resulting triangles is 0, 1 or 2, and that is returned.
-Resulting triangle corners (0, 3 or 6) are stored in res.
-Fourth component of triangles is linear interpolated, useful for coloring etc.
-*/
-int plane_clip_triangle(const struct Plane pl, const vec4 *corners, vec4 (*res)[3]);
-
 #endif

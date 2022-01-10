@@ -22,14 +22,11 @@ static vec4 *get_vertex_data(int *npoints)
 {
 #define TSTEPS 150
 #define USTEPS 10
-	// *4 because a rectangle is represented as 2 triangles, and clipping can split each one in half
-	static vec4 vertexdata[TSTEPS*USTEPS*4][3];
+	static vec4 vertexdata[TSTEPS*USTEPS*2][3];
 	static int ntriangles = 0;
 
 	if (ntriangles == 0) {
 		float pi = acosf(-1);
-
-		struct Plane xzplane = { .normal = {0,1,0}, .constant = 0 };
 
 		for (int tstep = 0; tstep < TSTEPS; tstep++) {
 			for (int ustep = 0; ustep < USTEPS; ustep++) {
@@ -46,8 +43,15 @@ static vec4 *get_vertex_data(int *npoints)
 				vec4 c = point_on_surface(t2, u1);
 				vec4 d = point_on_surface(t2, u2);
 
-				ntriangles += plane_clip_triangle(xzplane, (vec4[]){a,b,c}, &vertexdata[ntriangles]);
-				ntriangles += plane_clip_triangle(xzplane, (vec4[]){d,b,c}, &vertexdata[ntriangles]);
+				vertexdata[ntriangles][0] = a;
+				vertexdata[ntriangles][1] = b;
+				vertexdata[ntriangles][2] = c;
+				ntriangles++;
+
+				vertexdata[ntriangles][0] = d;
+				vertexdata[ntriangles][1] = b;
+				vertexdata[ntriangles][2] = c;
+				ntriangles++;
 			}
 		}
 
@@ -58,6 +62,8 @@ static vec4 *get_vertex_data(int *npoints)
 			vec4_mul_float_first3_inplace(&vertexdata[i][2], 2);
 		}
 	}
+
+	SDL_assert(ntriangles == sizeof(vertexdata)/sizeof(vertexdata[0]));
 
 	*npoints = 3*ntriangles;
 	return &vertexdata[0][0];
