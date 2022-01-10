@@ -2,9 +2,9 @@
 #include <SDL2/SDL.h>
 #include <stdlib.h>
 #include <string.h>
-#include "log.h"
-#include "opengl_boilerplate.h"
-#include "camera.h"
+#include "log.hpp"
+#include "opengl_boilerplate.hpp"
+#include "camera.hpp"
 
 // use glDeleteShader afterwards
 static GLuint create_shader(GLenum type, const char *source, const char *shadername)
@@ -27,7 +27,7 @@ static GLuint create_shader(GLenum type, const char *source, const char *shadern
 	const char *boilerplateloc = strstr(source, "BOILERPLATE_GOES_HERE");
 	char *tmp;
 	if (boilerplateloc) {
-		tmp = calloc(1, strlen(source) + strlen(boilerplate) + 1);
+		tmp = (char*)calloc(1, strlen(source) + strlen(boilerplate) + 1);
 		if (!tmp)
 			log_printf_abort("not enough memory");
 
@@ -48,7 +48,7 @@ static GLuint create_shader(GLenum type, const char *source, const char *shadern
 	if (status == GL_FALSE) {
 		GLint loglen;
 		glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &loglen);
-		char *log = calloc(1, loglen+1);
+		char *log = (char*)calloc(1, loglen+1);
 		SDL_assert(log);
 		glGetShaderInfoLog(shader, loglen, NULL, log);
 		log_printf_abort("compiling shader \"%s\" failed: %s", shadername, log);
@@ -67,7 +67,7 @@ static void link_program(GLuint prog)
 	if (status == GL_FALSE) {
 		GLint loglen;
 		glGetProgramiv(prog, GL_INFO_LOG_LENGTH, &loglen);
-		char *log = calloc(1, loglen+1);
+		char *log = (char*)calloc(1, loglen+1);
 		SDL_assert(log);
 		glGetProgramInfoLog(prog, loglen, NULL, log);
 		log_printf_abort("linking shader program failed: %s", log);
@@ -122,7 +122,7 @@ struct OpenglBoilerplateState opengl_boilerplate_init(void)
 	if (!wnd)
 		log_printf_abort("SDL_CreateWindow failed: %s", SDL_GetError());
 
-	SDL_GLContext *ctx = SDL_GL_CreateContext(wnd);
+	SDL_GLContext ctx = SDL_GL_CreateContext(wnd);
 	if (!ctx)
 		log_printf_abort("SDL_GL_CreateContext failed: %s", SDL_GetError());
 
@@ -148,7 +148,7 @@ struct OpenglBoilerplateState opengl_boilerplate_init(void)
 
 	glViewport(0, 0, CAMERA_SCREEN_WIDTH, CAMERA_SCREEN_HEIGHT);
 
-	return (struct OpenglBoilerplateState){ .window = wnd, .ctx = ctx };
+	return OpenglBoilerplateState{ .window = wnd, .ctx = ctx };
 }
 
 void opengl_boilerplate_quit(const struct OpenglBoilerplateState *state)

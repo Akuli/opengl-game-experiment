@@ -2,8 +2,8 @@
 #define ENEMY_H
 
 #include <GL/glew.h>
-#include "camera.h"
-#include "map.h"
+#include "camera.hpp"
+#include "map.hpp"
 
 struct Enemy {
 	GLuint shaderprogram;

@@ -1,5 +1,5 @@
 #include <math.h>
-#include "linalg.h"
+#include "linalg.hpp"
 
 extern inline vec2 vec2_add(vec2 a, vec2 b);
 extern inline vec3 vec3_add(vec3 a, vec3 b);
@@ -39,21 +39,21 @@ mat2 mat2_rotation(float angle)
 {
 	float cos = cosf(angle);
 	float sin = sinf(angle);
-	return (mat2){ .rows = {
-		{ cos, -sin },
-		{ sin, cos  },
-	}};
+	return mat2{
+		cos, -sin,
+		sin, cos,
+	};
 }
 
 mat3 mat3_rotation_xz(float angle)
 {
 	float cos = cosf(angle);
 	float sin = sinf(angle);
-	return (mat3){ .rows = {
-		{ cos, 0, -sin },
-		{ 0,   1, 0    },
-		{ sin, 0, cos  },
-	}};
+	return mat3{
+		cos, 0, -sin,
+		0,   1, 0,
+		sin, 0, cos,
+	};
 }
 
 static void swap(float *a, float *b)

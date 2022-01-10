@@ -1,29 +1,27 @@
-CFLAGS += -Wall -Wextra -Wpedantic -std=c11
-CFLAGS += -Wfloat-conversion -Wno-sign-compare -Werror=int-conversion
-CFLAGS += -Werror=incompatible-pointer-types
-CFLAGS += -Werror=implicit-function-declaration
-CFLAGS += -Werror=discarded-qualifiers
-CFLAGS += -Werror=stack-usage=60000
-CFLAGS += -DSDL_ASSERT_LEVEL=2              # enable SDL_assert()
-#CFLAGS += -Ofast -fno-finite-math-only  # https://stackoverflow.com/q/47703436
-CFLAGS += -g
-CFLAGS += -MMD
+CXXFLAGS += -Wall -Wextra -Wpedantic -std=c++17
+CXXFLAGS += -Wfloat-conversion -Wno-sign-compare
+CXXFLAGS += -Wno-missing-field-initializers
+CXXFLAGS += -Werror=stack-usage=60000
+CXXFLAGS += -DSDL_ASSERT_LEVEL=2              # enable SDL_assert()
+#CXXFLAGS += -Ofast -fno-finite-math-only  # https://stackoverflow.com/q/47703436
+CXXFLAGS += -g
+CXXFLAGS += -MMD
 LDFLAGS += -lm -lSDL2
 
-CFLAGS += $(shell pkg-config glew --cflags)
+CXXFLAGS += $(shell pkg-config glew --cflags)
 LDFLAGS += $(shell pkg-config glew --libs)
 
-SRC := $(wildcard src/*.c)
-OBJ := $(SRC:src/%.c=obj/%.o)
+SRC := $(wildcard src/*.cpp)
+OBJ := $(SRC:src/%.cpp=obj/%.o)
 DEPENDS = $(OBJ:%.o=%.d)
 
 all: game
 
 game: $(OBJ)
-	$(CC) $(CFLAGS) $(OBJ) -o $@ $(LDFLAGS)
+	$(CC) $(CXXFLAGS) $(OBJ) -o $@ $(LDFLAGS)
 
-obj/%.o: src/%.c
-	mkdir -p $(@D) && $(CC) -c -o $@ $< $(CFLAGS)
+obj/%.o: src/%.cpp
+	mkdir -p $(@D) && $(CC) -c -o $@ $< $(CXXFLAGS)
 
 clean:
 	rm -rf obj

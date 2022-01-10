@@ -1,19 +1,25 @@
-#include "map.h"
+#include "map.hpp"
 #include <GL/glew.h>
 #include <SDL2/SDL.h>
 #include <string.h>
 #include <stdlib.h>
 #include <stdbool.h>
 #include <math.h>
-#include "camera.h"
-#include "log.h"
-#include "opengl_boilerplate.h"
+#include "camera.hpp"
+#include "log.hpp"
+#include "opengl_boilerplate.hpp"
 
 #define min(x, y) ((x)<(y) ? (x) : (y))
 #define min4(a,b,c,d) min(min(a,b),min(c,d))
 
 #define SECTION_SIZE 40  // side length of section square on xz plane
 #define TRIANGLES_PER_SECTION (2*SECTION_SIZE*SECTION_SIZE)
+
+struct GaussianCurveMountain {
+	float xzscale, yscale, centerx, centerz;
+	GaussianCurveMountain() = default;
+	GaussianCurveMountain(float xzscale, float yscale, float centerx, float centerz) : xzscale(xzscale),yscale(yscale),centerx(centerx),centerz(centerz) {}
+};
 
 struct Section {
 	int startx, startz;
@@ -23,7 +29,7 @@ struct Section {
 	yscale can be negative, xzscale can't
 	center coords are within the section and relative to section start, not depending on location of section
 	*/
-	struct GaussianCurveMountain { float xzscale,yscale,centerx,centerz; } mountains[100];
+	struct GaussianCurveMountain mountains[100];
 
 	/*
 	ytable contains cached values for height of map, depending also on neighbor sections.
@@ -59,12 +65,7 @@ static void generate_section(struct Section *sect)
 	for (i = 0; i < n/20; i++) {
 		float h = 5*tanf(uniform_random_float(-1.4f, 1.4f));
 		float w = uniform_random_float(fabsf(h), 3*fabsf(h));
-		sect->mountains[i] = (struct GaussianCurveMountain){
-			.xzscale = w,
-			.yscale = h,
-			.centerx = uniform_random_float(0, SECTION_SIZE),
-			.centerz = uniform_random_float(0, SECTION_SIZE),
-		};
+		sect->mountains[i] = GaussianCurveMountain(w, h, uniform_random_float(0, SECTION_SIZE), uniform_random_float(0, SECTION_SIZE));
 	}
 
 	// narrow and shallow
@@ -73,12 +74,7 @@ static void generate_section(struct Section *sect)
 		float w = uniform_random_float(2*h, 5*h);
 		if (rand() % 2)
 			h = -h;
-		sect->mountains[i] = (struct GaussianCurveMountain){
-			.xzscale = w,
-			.yscale = h,
-			.centerx = uniform_random_float(0, SECTION_SIZE),
-			.centerz = uniform_random_float(0, SECTION_SIZE),
-		};
+		sect->mountains[i] = GaussianCurveMountain(w, h, uniform_random_float(0, SECTION_SIZE), uniform_random_float(0, SECTION_SIZE));
 	}
 
 	// y=e^(-x^2) seems to be pretty much zero for |x| >= 3.
@@ -127,9 +123,9 @@ struct SectionQueue {
 static int section_preparing_thread(void *queueptr)
 {
 	SDL_SetThreadPriority(SDL_THREAD_PRIORITY_LOW);
-	struct SectionQueue *queue = queueptr;
+	SectionQueue *queue = (SectionQueue *)queueptr;
 
-	struct Section *tmp = malloc(sizeof(*tmp));
+	Section *tmp = (Section*)malloc(sizeof(*tmp));
 	SDL_assert(tmp);
 
 	while (!queue->quit) {
@@ -245,8 +241,8 @@ static void make_room_for_more_sections(struct Map *map, unsigned howmanymore)
 		return;
 	log_printf("growing section arrays: %u --> %u", oldalloc, map->sectsalloced);
 
-	map->itable = realloc(map->itable, sizeof(map->itable[0])*map->sectsalloced);
-	map->sections = realloc(map->sections, sizeof(map->sections[0])*map->sectsalloced);
+	map->itable = (int*)realloc(map->itable, sizeof(map->itable[0])*map->sectsalloced);
+	map->sections = (Section*)realloc(map->sections, sizeof(map->sections[0])*map->sectsalloced);
 	SDL_assert(map->itable && map->sections);
 
 	for (int h = 0; h < map->sectsalloced; h++)
@@ -324,14 +320,14 @@ static void ensure_ytable_is_ready(struct Map *map, struct Section *sect)
 	for (int ix = 0; ix < SECTION_SIZE; ix++) {
 		for (int iz = 0; iz < SECTION_SIZE; iz++) {
 			float triangle1[] = {
-				sect->startx + ix  , sect->ytable[ix  ][iz  ], sect->startz + iz  ,
-				sect->startx + ix+1, sect->ytable[ix+1][iz  ], sect->startz + iz  ,
-				sect->startx + ix  , sect->ytable[ix  ][iz+1], sect->startz + iz+1,
+				static_cast<float>(sect->startx) + ix  , sect->ytable[ix  ][iz  ], static_cast<float>(sect->startz) + iz  ,
+				static_cast<float>(sect->startx) + ix+1, sect->ytable[ix+1][iz  ], static_cast<float>(sect->startz) + iz  ,
+				static_cast<float>(sect->startx) + ix  , sect->ytable[ix  ][iz+1], static_cast<float>(sect->startz) + iz+1,
 			};
 			float triangle2[] = {
-				sect->startx + ix+1, sect->ytable[ix+1][iz+1], sect->startz + iz+1,
-				sect->startx + ix+1, sect->ytable[ix+1][iz  ], sect->startz + iz  ,
-				sect->startx + ix  , sect->ytable[ix  ][iz+1], sect->startz + iz+1,
+				static_cast<float>(sect->startx) + ix+1, sect->ytable[ix+1][iz+1], static_cast<float>(sect->startz) + iz+1,
+				static_cast<float>(sect->startx) + ix+1, sect->ytable[ix+1][iz  ], static_cast<float>(sect->startz) + iz  ,
+				static_cast<float>(sect->startx) + ix  , sect->ytable[ix  ][iz+1], static_cast<float>(sect->startz) + iz+1,
 			};
 			memcpy(*ptr++, triangle1, sizeof triangle1);
 			memcpy(*ptr++, triangle2, sizeof triangle2);
@@ -386,11 +382,11 @@ mat3 map_get_rotation(struct Map *map, float x, float z)
 	vec3_mul_float_inplace(&w, 1/sqrtf(vec3_dot(w,w)));
 
 	vec3 cross = vec3_cross(w, v);
-	mat3 res = { .rows = {
-		{ v.x, cross.x, w.x },
-		{ v.y, cross.y, w.y },
-		{ v.z, cross.z, w.z },
-	}};
+	mat3 res = {
+		v.x, cross.x, w.x,
+		v.y, cross.y, w.y,
+		v.z, cross.z, w.z,
+	};
 	SDL_assert(fabsf(mat3_det(res) - 1) < 0.01f);
 	return res;
 }
@@ -455,9 +451,9 @@ void map_render(struct Map *map, const struct Camera *cam)
 
 struct Map *map_new(void)
 {
-	struct Map *map = malloc(sizeof(*map));
+	Map *map = (Map*)malloc(sizeof(*map));
 	SDL_assert(map);
-	memset(map, 0, sizeof *map);
+	*map = Map{};
 
 	map->queue.lock = SDL_CreateMutex();
 	SDL_assert(map->queue.lock);

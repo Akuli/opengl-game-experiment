@@ -6,7 +6,7 @@
 
 struct OpenglBoilerplateState {
 	SDL_Window *window;
-	SDL_GLContext *ctx;
+	SDL_GLContext ctx;
 };
 
 struct OpenglBoilerplateState opengl_boilerplate_init(void);

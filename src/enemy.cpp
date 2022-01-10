@@ -1,13 +1,13 @@
-#include "enemy.h"
+#include "enemy.hpp"
 #include <GL/glew.h>
 #include <SDL2/SDL.h>
 #include <math.h>
 #include <stdbool.h>
 #include <stddef.h>
-#include "camera.h"
-#include "linalg.h"
-#include "map.h"
-#include "opengl_boilerplate.h"
+#include "camera.hpp"
+#include "linalg.hpp"
+#include "map.hpp"
+#include "opengl_boilerplate.hpp"
 
 static vec4 point_on_surface(float t, float u)
 {
@@ -78,7 +78,7 @@ void enemy_render(const struct Enemy *en, const struct Camera *cam, struct Map *
 		1, true, &cam->world2cam.rows[0][0]);
 	glUniformMatrix3fv(
 		glGetUniformLocation(en->shaderprogram, "mapRotation"),
-		1, true, &map_get_rotation(map, 0, 0).rows[0][0]);
+		1, true, (float*)map_get_rotation(map, 0, 0).rows);
 
 	int npoints;
 	get_vertex_data(&npoints);
@@ -94,7 +94,7 @@ void enemy_render(const struct Enemy *en, const struct Camera *cam, struct Map *
 
 struct Enemy enemy_new(void)
 {
-	struct Enemy enemy = {0};
+	Enemy enemy;
 
 	const char *vertex_shader =
 		"#version 330\n"

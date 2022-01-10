@@ -1,8 +1,8 @@
 #ifndef MAP_H
 #define MAP_H
 
-#include "camera.h"
-#include "linalg.h"
+#include "camera.hpp"
+#include "linalg.hpp"
 
 struct Map;  // IWYU pragma: keep
 

@@ -17,22 +17,22 @@ static_assert(sizeof(vec4) == 4*sizeof(float), "");
 static_assert(sizeof(mat2) == 2*2*sizeof(float), "");
 static_assert(sizeof(mat3) == 3*3*sizeof(float), "");
 
-inline vec2 vec2_add(vec2 a, vec2 b) { return (vec2){a.x+b.x, a.y+b.y }; }
-inline vec3 vec3_add(vec3 a, vec3 b) { return (vec3){a.x+b.x, a.y+b.y, a.z+b.z }; }
-inline vec4 vec4_add(vec4 a, vec4 b) { return (vec4){a.x+b.x, a.y+b.y, a.z+b.z, a.w+b.w }; }
-inline vec2 vec2_sub(vec2 a, vec2 b) { return (vec2){a.x-b.x, a.y-b.y }; }
-inline vec3 vec3_sub(vec3 a, vec3 b) { return (vec3){a.x-b.x, a.y-b.y, a.z-b.z }; }
-inline vec4 vec4_sub(vec4 a, vec4 b) { return (vec4){a.x-b.x, a.y-b.y, a.z-b.z, a.w-b.w }; }
+inline vec2 vec2_add(vec2 a, vec2 b) { return vec2{a.x+b.x, a.y+b.y }; }
+inline vec3 vec3_add(vec3 a, vec3 b) { return vec3{a.x+b.x, a.y+b.y, a.z+b.z }; }
+inline vec4 vec4_add(vec4 a, vec4 b) { return vec4{a.x+b.x, a.y+b.y, a.z+b.z, a.w+b.w }; }
+inline vec2 vec2_sub(vec2 a, vec2 b) { return vec2{a.x-b.x, a.y-b.y }; }
+inline vec3 vec3_sub(vec3 a, vec3 b) { return vec3{a.x-b.x, a.y-b.y, a.z-b.z }; }
+inline vec4 vec4_sub(vec4 a, vec4 b) { return vec4{a.x-b.x, a.y-b.y, a.z-b.z, a.w-b.w }; }
 inline void vec2_add_inplace(vec2 *a, vec2 b) { a->x += b.x; a->y += b.y; }
 inline void vec3_add_inplace(vec3 *a, vec3 b) { a->x += b.x; a->y += b.y; a->z += b.z; }
 inline void vec4_add_inplace(vec4 *a, vec4 b) { a->x += b.x; a->y += b.y; a->z += b.z; a->w += b.w; }
 inline void vec2_sub_inplace(vec2 *a, vec2 b) { a->x -= b.x; a->y -= b.y; }
 inline void vec3_sub_inplace(vec3 *a, vec3 b) { a->x -= b.x; a->y -= b.y; a->z -= b.z; }
 inline void vec4_sub_inplace(vec4 *a, vec4 b) { a->x -= b.x; a->y -= b.y; a->z -= b.z; a->w -= b.w; }
-inline vec2 vec2_mul_float(vec2 v, float f) { return (vec2){v.x*f, v.y*f}; }
-inline vec3 vec3_mul_float(vec3 v, float f) { return (vec3){v.x*f, v.y*f, v.z*f}; }
-inline vec4 vec4_mul_float(vec4 v, float f) { return (vec4){v.x*f, v.y*f, v.z*f, v.w*f}; }
-inline vec4 vec4_mul_float_first3(vec4 v, float f) { return (vec4){v.x*f, v.y*f, v.z*f, v.w}; }
+inline vec2 vec2_mul_float(vec2 v, float f) { return vec2{v.x*f, v.y*f}; }
+inline vec3 vec3_mul_float(vec3 v, float f) { return vec3{v.x*f, v.y*f, v.z*f}; }
+inline vec4 vec4_mul_float(vec4 v, float f) { return vec4{v.x*f, v.y*f, v.z*f, v.w*f}; }
+inline vec4 vec4_mul_float_first3(vec4 v, float f) { return vec4{v.x*f, v.y*f, v.z*f, v.w}; }
 inline void vec2_mul_float_inplace(vec2 *v, float f) { v->x *= f; v->y *= f; }
 inline void vec3_mul_float_inplace(vec3 *v, float f) { v->x *= f; v->y *= f; v->z *= f; }
 inline void vec4_mul_float_inplace(vec4 *v, float f) { v->x *= f; v->y *= f; v->z *= f; v->w *= f; }
@@ -42,7 +42,7 @@ inline vec2 vec2_lerp(vec2 a, vec2 b, float t) { return vec2_add(a, vec2_mul_flo
 inline vec3 vec3_lerp(vec3 a, vec3 b, float t) { return vec3_add(a, vec3_mul_float(vec3_sub(b,a), t)); }
 inline vec4 vec4_lerp(vec4 a, vec4 b, float t) { return vec4_add(a, vec4_mul_float(vec4_sub(b,a), t)); }
 inline float unlerp(float a, float b, float lerped) { return (lerped-a)/(b-a); }
-inline vec3 vec3_cross(vec3 a, vec3 b) { return (vec3){ a.y*b.z - a.z*b.y, a.z*b.x - a.x*b.z, a.x*b.y - a.y*b.x }; }
+inline vec3 vec3_cross(vec3 a, vec3 b) { return vec3{ a.y*b.z - a.z*b.y, a.z*b.x - a.x*b.z, a.x*b.y - a.y*b.x }; }
 inline float vec2_dot(vec2 a, vec2 b) { return a.x*b.x + a.y*b.y; }
 inline float vec3_dot(vec3 a, vec3 b) { return a.x*b.x + a.y*b.y + a.z*b.z; }
 inline float vec4_dot(vec4 a, vec4 b) { return a.x*b.x + a.y*b.y + a.z*b.z + a.w*b.w; }
@@ -57,12 +57,12 @@ inline float mat3_det(mat3 M)
 		- M.rows[0][2]*M.rows[1][1]*M.rows[2][0];
 }
 
-inline vec2 mat2_mul_vec2(mat2 M, vec2 v) { return (vec2){
+inline vec2 mat2_mul_vec2(mat2 M, vec2 v) { return vec2{
 	v.x*M.rows[0][0] + v.y*M.rows[0][1],
 	v.x*M.rows[1][0] + v.y*M.rows[1][1],
 };}
 
-inline vec3 mat3_mul_vec3(mat3 M, vec3 v) { return (vec3){
+inline vec3 mat3_mul_vec3(mat3 M, vec3 v) { return vec3{
 	v.x*M.rows[0][0] + v.y*M.rows[0][1] + v.z*M.rows[0][2],
 	v.x*M.rows[1][0] + v.y*M.rows[1][1] + v.z*M.rows[1][2],
 	v.x*M.rows[2][0] + v.y*M.rows[2][1] + v.z*M.rows[2][2],
