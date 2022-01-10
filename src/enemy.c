@@ -110,7 +110,7 @@ struct Enemy *enemy_new(void)
 		"    // Resulting z will be used in z-buffer\n"
 		"    gl_Position = vec4(pos.x, pos.y+1, 1, -pos.z);\n"
 		"\n"
-		"    vertexToFragmentColor.xyz = mix(vec3(0.6,0.3,0), vec3(0,0,0), positionAndColor.w);\n"
+		"    vertexToFragmentColor.xyz = mix(vec3(0.5,0.25,0), vec3(0.2,0.1,0), positionAndColor.w);\n"
 		"    vertexToFragmentColor.w = 1;\n"
 		"}\n"
 		;
