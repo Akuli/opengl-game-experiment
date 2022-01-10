@@ -7,6 +7,36 @@
 // use glDeleteShader afterwards
 static GLuint create_shader(GLenum type, const char *source, const char *shadername)
 {
+	const char *boilerplate =
+		"vec4 darkerAtDistance(in vec3 brightColor, in vec3 locationFromCamera)\n"
+		"{\n"
+		"    vec3 rgb = brightColor * exp(-0.0003*pow(30+length(locationFromCamera),2));\n"
+		"    return vec4(rgb.x, rgb.y, rgb.z, 1);\n"
+		"}\n"
+		"\n"
+		"vec4 locationFromCameraToGlPosition(in vec3 locationFromCamera)\n"
+		"{\n"
+		"    // Other components of (x,y,z,w) will be implicitly divided by w.\n"
+		"    // Resulting z will be used in z-buffer.\n"
+		"    return vec4(locationFromCamera.x, locationFromCamera.y, 1, -locationFromCamera.z);\n"
+		"}\n"
+		;
+
+	const char *boilerplateloc = strstr(source, "BOILERPLATE_GOES_HERE");
+	char *tmp;
+	if (boilerplateloc) {
+		tmp = calloc(1, strlen(source) + strlen(boilerplate) + 1);
+		if (!tmp)
+			log_printf_abort("not enough memory");
+
+		strncpy(tmp, source, boilerplateloc-source);
+		strcat(tmp, boilerplate);
+		strcat(tmp, boilerplateloc + strlen("BOILERPLATE_GOES_HERE"));
+		source = tmp;
+	} else {
+		tmp = NULL;
+	}
+
 	GLuint shader = glCreateShader(type);
 	glShaderSource(shader, 1, &source, NULL);
 	glCompileShader(shader);
@@ -22,6 +52,7 @@ static GLuint create_shader(GLenum type, const char *source, const char *shadern
 		log_printf_abort("compiling shader \"%s\" failed: %s", shadername, log);
 	}
 
+	free(tmp);
 	return shader;
 }
 
@@ -43,6 +74,21 @@ static void link_program(GLuint prog)
 
 GLuint opengl_boilerplate_create_shader_program(const char *vertex_shader, const char *fragment_shader)
 {
+	SDL_assert(vertex_shader);
+	if (!fragment_shader) {
+		fragment_shader =
+			"#version 330\n"
+			"\n"
+			"smooth in vec4 vertexToFragmentColor;\n"
+			"out vec4 outColor;\n"
+			"\n"
+			"void main(void)\n"
+			"{\n"
+			"    outColor = vertexToFragmentColor;\n"
+			"}\n"
+			;
+	}
+
 	GLuint prog = glCreateProgram();
 
 	GLuint vs = create_shader(GL_VERTEX_SHADER, vertex_shader, "vertex_shader");

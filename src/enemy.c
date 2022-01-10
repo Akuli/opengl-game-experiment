@@ -120,32 +120,18 @@ struct Enemy *enemy_new(void)
 		"uniform vec3 addToLocation;\n"
 		"uniform mat3 world2cam;\n"
 		"uniform mat3 mapRotation;\n"
-		"uniform float mapHeight;\n"
 		"smooth out vec4 vertexToFragmentColor;\n"
+		"\n"
+		"BOILERPLATE_GOES_HERE\n"
 		"\n"
 		"void main(void)\n"
 		"{\n"
 		"    vec3 pos = world2cam*(mapRotation*positionAndColor.xyz + addToLocation);\n"
-		"    // Other components of (x,y,z,w) will be implicitly divided by w\n"
-		"    // Resulting z will be used in z-buffer\n"
-		"    gl_Position = vec4(pos.x, pos.y, 1, -pos.z);\n"
-		"\n"
-		"    vertexToFragmentColor.xyz = vec3(1,0,1)*mix(0.1, 0.4, 1-positionAndColor.w);\n"
-		"    vertexToFragmentColor.w = 1;\n"
+		"    gl_Position = locationFromCameraToGlPosition(pos);\n"
+		"    vertexToFragmentColor = darkerAtDistance(vec3(1,0,1)*mix(0.1, 0.4, 1-positionAndColor.w), pos);\n"
 		"}\n"
 		;
-	const char *fragment_shader =
-		"#version 330\n"
-		"\n"
-		"smooth in vec4 vertexToFragmentColor;\n"
-		"out vec4 outColor;\n"
-		"\n"
-		"void main(void)\n"
-		"{\n"
-		"    outColor = vertexToFragmentColor;\n"
-		"}\n"
-		;
-	enemy->shaderprogram = opengl_boilerplate_create_shader_program(vertex_shader, fragment_shader);
+	enemy->shaderprogram = opengl_boilerplate_create_shader_program(vertex_shader, NULL);
 
 	return enemy;
 }

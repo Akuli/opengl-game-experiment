@@ -470,34 +470,22 @@ struct Map *map_new(void)
 		"uniform mat3 world2cam;\n"
 		"smooth out vec4 vertexToFragmentColor;\n"
 		"\n"
+		"BOILERPLATE_GOES_HERE\n"
+		"\n"
 		"void main(void)\n"
 		"{\n"
 		"    vec3 pos = world2cam*(position - cameraLocation);\n"
-		"    // Other components of (x,y,z,w) will be implicitly divided by w\n"
-		"    // Resulting z will be used in z-buffer\n"
-		"    gl_Position = vec4(pos.x, pos.y, 1, -pos.z);\n"
+		"    gl_Position = locationFromCameraToGlPosition(pos);\n"
 		"\n"
 		"    vec3 rgb = vec3(\n"
 		"        pow(0.5 + atan((position.y + 5)/10)/3.1415, 2),\n"
 		"        0.5*(0.5 + atan(position.y/10)/3.1415),\n"
 		"        0.5 - atan(position.y/10)/3.1415\n"
 		"    );\n"
-		"    vertexToFragmentColor.xyz = rgb * exp(-0.0003*pow(30+length(pos),2));\n"
-		"    vertexToFragmentColor.w = 1;\n"
+		"    vertexToFragmentColor = darkerAtDistance(rgb, pos);\n"
 		"}\n"
 		;
-	const char *fragment_shader =
-		"#version 330\n"
-		"\n"
-		"smooth in vec4 vertexToFragmentColor;\n"
-		"out vec4 outColor;\n"
-		"\n"
-		"void main(void)\n"
-		"{\n"
-		"    outColor = vertexToFragmentColor;\n"
-		"}\n"
-		;
-	map->shaderprogram = opengl_boilerplate_create_shader_program(vertex_shader, fragment_shader);
+	map->shaderprogram = opengl_boilerplate_create_shader_program(vertex_shader, NULL);
 
 	return map;
 }
