@@ -12,7 +12,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
-    - run: git submodule init && git submodule update
     - run: sudo apt update && sudo apt install $APT_PACKAGES
     - run: CFLAGS=-Werror make -j2
 
@@ -20,7 +19,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
-    - run: git submodule init && git submodule update
     # Apparently iwyu also needs clang-9, "iwyu --version" says it's based on it
     # Errors I got without:
     #
