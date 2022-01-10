@@ -34,6 +34,7 @@ inline void vec2_mul_float_inplace(vec2 *v, float f) { v->x *= f; v->y *= f; }
 inline void vec3_mul_float_inplace(vec3 *v, float f) { v->x *= f; v->y *= f; v->z *= f; }
 inline void vec4_mul_float_inplace(vec4 *v, float f) { v->x *= f; v->y *= f; v->z *= f; v->w *= f; }
 inline void vec4_mul_float_first3_inplace(vec4 *v, float f) { v->x *= f; v->y *= f; v->z *= f; }
+inline float lerp(float a, float b, float t) { return a + (b-a)*t; }
 inline vec2 vec2_lerp(vec2 a, vec2 b, float t) { return vec2_add(a, vec2_mul_float(vec2_sub(b,a), t)); }
 inline vec3 vec3_lerp(vec3 a, vec3 b, float t) { return vec3_add(a, vec3_mul_float(vec3_sub(b,a), t)); }
 inline vec4 vec4_lerp(vec4 a, vec4 b, float t) { return vec4_add(a, vec4_mul_float(vec4_sub(b,a), t)); }

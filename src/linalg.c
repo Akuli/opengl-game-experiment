@@ -20,6 +20,7 @@ extern inline void vec2_mul_float_inplace(vec2 *v, float f);
 extern inline void vec3_mul_float_inplace(vec3 *v, float f);
 extern inline void vec4_mul_float_inplace(vec4 *v, float f);
 extern inline void vec4_mul_float_first3_inplace(vec4 *v, float f);
+extern inline float lerp(float a, float b, float t);
 extern inline vec2 vec2_lerp(vec2 a, vec2 b, float t);
 extern inline vec3 vec3_lerp(vec3 a, vec3 b, float t);
 extern inline vec4 vec4_lerp(vec4 a, vec4 b, float t);

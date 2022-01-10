@@ -12,52 +12,21 @@ struct Enemy {
 	GLuint vbo;  // Vertex Buffer Object, represents triangles going to gpu
 };
 
-#define N_ARC_POINTS 10
-
-// Create equally spaced points on outer arc connecting two points in 2D
-static void create_arc_points(vec2 *res, vec2 upper, vec2 lower)
+static vec4 point_on_surface(float t, float u)
 {
-	vec2 center = vec2_lerp(upper, lower, 0.5f);
-	vec2 center2upper = vec2_sub(upper, center);
+	int n = 5;  // How many "layers" should the poo have
 	float pi = acosf(-1);
-	for (int i = 0; i < N_ARC_POINTS; i++)
-		res[i] = vec2_add(center, mat2_mul_vec2(mat2_rotation(-i*pi/(N_ARC_POINTS-1)), center2upper));
-}
+	float angle = n*2*pi*t;
+	float colorval = u/pi;
 
-static void create_arc_in_3d(
-	vec4 (*vertexdata)[3], int *ntriangles,
-	vec2 upper1, vec2 lower1, float angle1,
-	vec2 upper2, vec2 lower2, float angle2)
-{
-	vec2 arcpoints1_2d[N_ARC_POINTS], arcpoints2_2d[N_ARC_POINTS];
-	create_arc_points(arcpoints1_2d, upper1, lower1);
-	create_arc_points(arcpoints2_2d, upper2, lower2);
+#define y(t) (2-(t)-(t)*(t))
+	vec2 arccenter = { t + 0.5f/n, (y(t)+y(t+1.0f/n))/2 };
+	vec2 arcdiff = { -0.5f/n, (y(t)-y(t+1.0f/n))/2 };
+#undef y
 
-	// Map arc points to 3D
-	vec3 arcpoints1[N_ARC_POINTS], arcpoints2[N_ARC_POINTS];
-	mat3 rot1 = mat3_rotation_xz(angle1);
-	mat3 rot2 = mat3_rotation_xz(angle2);
-	for (int i = 0; i < N_ARC_POINTS; i++) {
-		arcpoints1[i] = mat3_mul_vec3(rot1, (vec3){arcpoints1_2d[i].x, arcpoints1_2d[i].y, 0});
-		arcpoints2[i] = mat3_mul_vec3(rot2, (vec3){arcpoints2_2d[i].x, arcpoints2_2d[i].y, 0});
-	}
-
-	// Connect with triangles
-	for (int i = 0; i < N_ARC_POINTS-1; i++) {
-		vec4 triangle1[] = {
-			{ arcpoints1[i].x, arcpoints1[i].y, arcpoints1[i].z, i/(float)(N_ARC_POINTS-1) },
-			{ arcpoints2[i].x, arcpoints2[i].y, arcpoints2[i].z, i/(float)(N_ARC_POINTS-1) },
-			{ arcpoints1[i+1].x, arcpoints1[i+1].y, arcpoints1[i+1].z, (i+1)/(float)(N_ARC_POINTS-1) },
-		};
-		vec4 triangle2[] = {
-			{ arcpoints2[i+1].x, arcpoints2[i+1].y, arcpoints2[i+1].z, (i+1)/(float)(N_ARC_POINTS-1) },
-			{ arcpoints2[i].x, arcpoints2[i].y, arcpoints2[i].z, i/(float)(N_ARC_POINTS-1) },
-			{ arcpoints1[i+1].x, arcpoints1[i+1].y, arcpoints1[i+1].z, (i+1)/(float)(N_ARC_POINTS-1) },
-		};
-
-		*ntriangles += plane_clip_triangle((struct Plane){.normal.y=1}, triangle1, &vertexdata[*ntriangles]);
-		*ntriangles += plane_clip_triangle((struct Plane){.normal.y=1}, triangle2, &vertexdata[*ntriangles]);
-	}
+	vec2 arcpoint = vec2_add(arccenter, mat2_mul_vec2(mat2_rotation(-u), arcdiff));
+	vec3 arcpoint3d = mat3_mul_vec3(mat3_rotation_xz(angle), (vec3){ arcpoint.x, arcpoint.y, 0 });
+	return (vec4){ arcpoint3d.x, arcpoint3d.y, arcpoint3d.z, colorval };
 }
 
 void enemy_render(struct Enemy *enemy, const struct Camera *cam)
@@ -72,20 +41,28 @@ void enemy_render(struct Enemy *enemy, const struct Camera *cam)
 
 	static vec4 vertexdata[10000][3];
 	int ntriangles = 0;
-
 	float pi = acosf(-1);
-	int n = 5;  // number of turns around y axis
-	float dt = 0.05f / n;
 
-#define outer_shape_in_2d(t) ((vec2){ (t), 2 - (t) - (t)*(t) })
-	// Min value of t tweaked so that the tip of enemy looks good
-	for (float t = -0.1f; t < 1; t += dt) {
-		create_arc_in_3d(
-			vertexdata, &ntriangles,
-			outer_shape_in_2d(t), outer_shape_in_2d(t+1.0f/n), n*2*pi*t,
-			outer_shape_in_2d(t+dt), outer_shape_in_2d(t+dt+1.0f/n), n*2*pi*(t+dt));
+	int tsteps = 100, usteps = 10;
+	struct Plane xzplane = { .normal = {0,1,0}, .constant = 0 };
+
+	for (int tstep = 0; tstep < tsteps; tstep++) {
+		for (int ustep = 0; ustep < usteps; ustep++) {
+			// Min value of t tweaked so that the tip of enemy looks good
+			float t1 = lerp(-0.1f, 1, tstep/(float)tsteps);
+			float t2 = lerp(-0.1f, 1, (tstep+1)/(float)tsteps);
+			float u1 = lerp(0, pi, ustep/(float)usteps);
+			float u2 = lerp(0, pi, (ustep+1)/(float)usteps);
+
+			vec4 a = point_on_surface(t1, u1);
+			vec4 b = point_on_surface(t1, u2);
+			vec4 c = point_on_surface(t2, u1);
+			vec4 d = point_on_surface(t2, u2);
+
+			ntriangles += plane_clip_triangle(xzplane, (vec4[]){a,b,c}, &vertexdata[ntriangles]);
+			ntriangles += plane_clip_triangle(xzplane, (vec4[]){d,b,c}, &vertexdata[ntriangles]);
+		}
 	}
-#undef outer_shape_in_2d
 
 	// Scale it up
 	for (int i = 0; i < ntriangles; i++) {
