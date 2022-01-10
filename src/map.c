@@ -104,7 +104,7 @@ static void generate_section(struct Section *sect)
 				float xzscale = sect->mountains[i].xzscale;
 				y += sect->mountains[i].yscale * expf(-1/(xzscale*xzscale) * (dx*dx + dz*dz));
 			}
-			sect->ytableraw[xidx][zidx] = y*0;
+			sect->ytableraw[xidx][zidx] = y;
 		}
 	}
 }
@@ -367,6 +367,29 @@ float map_getheight(struct Map *map, float x, float z)
 		+ (1-t)*u*sect->ytable[ix][iz+1]
 		+ t*(1-u)*sect->ytable[ix+1][iz]
 		+ t*u*sect->ytable[ix+1][iz+1];
+}
+
+mat3 map_get_rotation(struct Map *map, float x, float z)
+{
+	// a bit of a hack, but works well enough
+	float h = 0.01f;
+	vec3 v = { 2*h, map_getheight(map,x+h,z) - map_getheight(map,x-h,z), 0 };
+	vec3 w = { 0, map_getheight(map,x,z+h) - map_getheight(map,x,z-h), 2*h };
+
+	// Ensure that v and w are perpendicular and length 1
+	// https://en.wikipedia.org/wiki/Gram%E2%80%93Schmidt_process
+	vec3_mul_float_inplace(&v, 1/sqrtf(vec3_dot(v,v)));
+	vec3_sub_inplace(&w, vec3_mul_float(v, vec3_dot(v,w)));
+	vec3_mul_float_inplace(&w, 1/sqrtf(vec3_dot(w,w)));
+
+	vec3 cross = vec3_cross(w, v);
+	mat3 res = { .rows = {
+		{ v.x, cross.x, w.x },
+		{ v.y, cross.y, w.y },
+		{ v.z, cross.z, w.z },
+	}};
+	SDL_assert(fabsf(mat3_det(res) - 1) < 0.01f);
+	return res;
 }
 
 void map_render(struct Map *map, const struct Camera *cam)

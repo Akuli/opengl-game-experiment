@@ -38,7 +38,7 @@ int main(void)
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		map_render(map, &cam);
-		enemy_render(en, &cam);
+		enemy_render(en, &cam, map);
 		SDL_GL_SwapWindow(bpstate.window);
 
 		SDL_Event e;

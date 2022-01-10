@@ -5,6 +5,7 @@
 #include "assert.h"
 #include "camera.h"
 #include "log.h"
+#include "map.h"
 #include "opengl_boilerplate.h"
 
 struct Enemy {
@@ -74,15 +75,20 @@ static vec4 *get_vertex_data(int *npoints)
 	return &vertexdata[0][0];
 }
 
-void enemy_render(struct Enemy *enemy, const struct Camera *cam)
+void enemy_render(struct Enemy *enemy, const struct Camera *cam, struct Map *map)
 {
 	glUseProgram(enemy->shaderprogram);
+
+	vec3 v = vec3_sub((vec3){0,map_getheight(map, 0, 0),0}, cam->location);
 	glUniform3f(
-		glGetUniformLocation(enemy->shaderprogram, "cameraLocation"),
-		cam->location.x, cam->location.y, cam->location.z);
+		glGetUniformLocation(enemy->shaderprogram, "addToLocation"),
+		v.x, v.y, v.z);
 	glUniformMatrix3fv(
 		glGetUniformLocation(enemy->shaderprogram, "world2cam"),
 		1, true, &cam->world2cam.rows[0][0]);
+	glUniformMatrix3fv(
+		glGetUniformLocation(enemy->shaderprogram, "mapRotation"),
+		1, true, &map_get_rotation(map, 0, 0).rows[0][0]);
 
 	if (enemy->vbo == 0) {
 		int npoints;
@@ -117,16 +123,18 @@ struct Enemy *enemy_new(void)
 		"#version 330\n"
 		"\n"
 		"layout(location = 0) in vec4 positionAndColor;\n"
-		"uniform vec3 cameraLocation;\n"
+		"uniform vec3 addToLocation;\n"
 		"uniform mat3 world2cam;\n"
+		"uniform mat3 mapRotation;\n"
+		"uniform float mapHeight;\n"
 		"smooth out vec4 vertexToFragmentColor;\n"
 		"\n"
 		"void main(void)\n"
 		"{\n"
-		"    vec3 pos = world2cam*(positionAndColor.xyz - cameraLocation);\n"
+		"    vec3 pos = world2cam*(mapRotation*positionAndColor.xyz + addToLocation);\n"
 		"    // Other components of (x,y,z,w) will be implicitly divided by w\n"
 		"    // Resulting z will be used in z-buffer\n"
-		"    gl_Position = vec4(pos.x, pos.y+1, 1, -pos.z);\n"
+		"    gl_Position = vec4(pos.x, pos.y, 1, -pos.z);\n"
 		"\n"
 		"    vertexToFragmentColor.xyz = mix(vec3(0.5,0.25,0), vec3(0.2,0.1,0), positionAndColor.w);\n"
 		"    vertexToFragmentColor.w = 1;\n"
