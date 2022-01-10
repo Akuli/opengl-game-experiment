@@ -1,7 +1,12 @@
 FLAGS += -Xiwyu --mapping_file=iwyumappings.imp
 FLAGS += -Xiwyu --no_fwd_decls
+
 # Hide stuff that C compilers warn about anyway
 FLAGS += -Wno-static-local-in-inline -Wno-absolute-value
+
+# On github actions, most SDL2 headers are in /usr/include/x86_64-linux-gnu/SDL2/.
+# But begin_code.h is in /usr/include/SDL2. I have no idea why.
+FLAGS += -I/usr/include/SDL2
 
 SRC := $(wildcard src/*.c src/*.h)
 
