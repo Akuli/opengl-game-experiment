@@ -18,10 +18,10 @@ DEPENDS = $(OBJ:%.o=%.d)
 all: game
 
 game: $(OBJ)
-	$(CC) $(CXXFLAGS) $(OBJ) -o $@ $(LDFLAGS)
+	$(CXX) $(CXXFLAGS) $(OBJ) -o $@ $(LDFLAGS)
 
 obj/%.o: src/%.cpp
-	mkdir -p $(@D) && $(CC) -c -o $@ $< $(CXXFLAGS)
+	mkdir -p $(@D) && $(CXX) -c -o $@ $< $(CXXFLAGS)
 
 clean:
 	rm -rf obj

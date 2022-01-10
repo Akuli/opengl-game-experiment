@@ -451,7 +451,7 @@ void map_render(struct Map *map, const struct Camera *cam)
 
 struct Map *map_new(void)
 {
-	Map *map = (Map*)malloc(sizeof(*map));
+	Map *map = (Map*)calloc(1, sizeof(*map));
 	SDL_assert(map);
 	*map = Map{};
 
