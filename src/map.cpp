@@ -5,6 +5,8 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <math.h>
+#include <array>
+#include <random>
 #include "camera.hpp"
 #include "log.hpp"
 #include "opengl_boilerplate.hpp"
@@ -29,47 +31,49 @@ struct Section {
 	yscale can be negative, xzscale can't
 	center coords are within the section and relative to section start, not depending on location of section
 	*/
-	struct GaussianCurveMountain mountains[100];
+	std::array<GaussianCurveMountain, 100> mountains;
 
 	/*
-	ytable contains cached values for height of map, depending also on neighbor sections.
+	y_table contains cached values for height of map, depending also on neighbor sections.
 
 	Raw version:
 		- contains enough values to cover neighbors too
 		- does not take in account neighbors
 		- is slow to compute
-		- is always ready to be used, even when ytableready is false
+		- is always ready to be used, even when y_table_and_vertexdata_ready is false
 
 	vertexdata is passed to the gpu for rendering, and represents triangles.
-	Don't use it (or ytable) until ytableready is true.
 	*/
-	float ytableraw[3*SECTION_SIZE + 1][3*SECTION_SIZE + 1];
-	float ytable[SECTION_SIZE + 1][SECTION_SIZE + 1];
-	GLfloat vertexdata[TRIANGLES_PER_SECTION][9];
-	bool ytableready;
+	std::array<std::array<float, 3*SECTION_SIZE + 1>, 3*SECTION_SIZE + 1> raw_y_table;
+	std::array<std::array<float, SECTION_SIZE + 1>, SECTION_SIZE + 1> y_table;
+	std::array<std::array<vec3, 3>, TRIANGLES_PER_SECTION> vertexdata;
+	bool y_table_and_vertexdata_ready;
 };
 
 static float uniform_random_float(float min, float max)
 {
-	return min + rand()*(max-min)/(float)RAND_MAX;
+	static std::default_random_engine random_engine = {};
+	static bool ready = false;
+	if (!ready)
+		random_engine.seed(time(NULL));
+	ready = true;
+	return std::uniform_real_distribution<float>(min, max)(random_engine);
 }
 
 static void generate_section(struct Section *sect)
 {
-	sect->ytableready = false;
-
+	sect->y_table_and_vertexdata_ready = false;
 	int i;
-	int n = sizeof(sect->mountains)/sizeof(sect->mountains[0]);
 
 	// wide and deep/tall
-	for (i = 0; i < n/20; i++) {
+	for (i = 0; i < sect->mountains.size()/20; i++) {
 		float h = 5*tanf(uniform_random_float(-1.4f, 1.4f));
 		float w = uniform_random_float(fabsf(h), 3*fabsf(h));
 		sect->mountains[i] = GaussianCurveMountain(w, h, uniform_random_float(0, SECTION_SIZE), uniform_random_float(0, SECTION_SIZE));
 	}
 
 	// narrow and shallow
-	for (; i < n; i++) {
+	for (; i < sect->mountains.size(); i++) {
 		float h = uniform_random_float(0.25f, 1.5f);
 		float w = uniform_random_float(2*h, 5*h);
 		if (rand() % 2)
@@ -81,7 +85,7 @@ static void generate_section(struct Section *sect)
 	// We use this to keep gaussian curves within the neighboring sections.
 	int xzmin = -SECTION_SIZE, xzmax = 2*SECTION_SIZE;
 
-	for (i = 0; i < n; i++) {
+	for (i = 0; i < sect->mountains.size(); i++) {
 		float mindist = min4(
 			sect->mountains[i].centerx - xzmin,
 			sect->mountains[i].centerz - xzmin,
@@ -97,13 +101,13 @@ static void generate_section(struct Section *sect)
 			int z = zidx - SECTION_SIZE;
 
 			float y = 0;
-			for (int i = 0; i < sizeof(sect->mountains) / sizeof(sect->mountains[0]); i++) {
+			for (int i = 0; i < sect->mountains.size(); i++) {
 				float dx = x - sect->mountains[i].centerx;
 				float dz = z - sect->mountains[i].centerz;
 				float xzscale = sect->mountains[i].xzscale;
 				y += sect->mountains[i].yscale * expf(-1/(xzscale*xzscale) * (dx*dx + dz*dz));
 			}
-			sect->ytableraw[xidx][zidx] = y;
+			sect->raw_y_table[xidx][zidx] = y;
 		}
 	}
 }
@@ -114,6 +118,7 @@ that needs to be added. There's a separate thread that generates them in the
 background. After generating, a section can be added anywhere on the map.
 */
 struct SectionQueue {
+	// TODO: sects should be a vector
 	struct Section sects[30];  // should have about 4x the room it typically needs, because corner cases
 	int len;
 	SDL_mutex *lock;  // hold this while adding/removing/checking sects or len
@@ -284,9 +289,9 @@ static struct Section *find_or_add_section(struct Map *map, int startx, int star
 	return res;
 }
 
-static void ensure_ytable_is_ready(struct Map *map, struct Section *sect)
+static void ensure_y_table_is_ready(struct Map *map, struct Section *sect)
 {
-	if (sect->ytableready)
+	if (sect->y_table_and_vertexdata_ready)
 		return;
 
 	struct Section *sections[9] = {
@@ -309,33 +314,33 @@ static void ensure_ytable_is_ready(struct Map *map, struct Section *sect)
 				int zdiff = sect->startz - (*s)->startz;
 				int ix = xidx + SECTION_SIZE + xdiff;
 				int iz = zidx + SECTION_SIZE + zdiff;
-				y += (*s)->ytableraw[ix][iz];
+				y += (*s)->raw_y_table[ix][iz];
 			}
 
-			sect->ytable[xidx][zidx] = y;
+			sect->y_table[xidx][zidx] = y;
 		}
 	}
 
-	float (*ptr)[9] = sect->vertexdata;
+	int i = 0;
 	for (int ix = 0; ix < SECTION_SIZE; ix++) {
 		for (int iz = 0; iz < SECTION_SIZE; iz++) {
-			float triangle1[] = {
-				static_cast<float>(sect->startx) + ix  , sect->ytable[ix  ][iz  ], static_cast<float>(sect->startz) + iz  ,
-				static_cast<float>(sect->startx) + ix+1, sect->ytable[ix+1][iz  ], static_cast<float>(sect->startz) + iz  ,
-				static_cast<float>(sect->startx) + ix  , sect->ytable[ix  ][iz+1], static_cast<float>(sect->startz) + iz+1,
+			float sx = sect->startx, sz = sect->startz;  // c++ sucks ass
+
+			sect->vertexdata[i++] = std::array<vec3, 3>{
+				vec3{sx + ix  , sect->y_table[ix  ][iz  ], sz + iz  },
+				vec3{sx + ix+1, sect->y_table[ix+1][iz  ], sz + iz  },
+				vec3{sx + ix  , sect->y_table[ix  ][iz+1], sz + iz+1},
 			};
-			float triangle2[] = {
-				static_cast<float>(sect->startx) + ix+1, sect->ytable[ix+1][iz+1], static_cast<float>(sect->startz) + iz+1,
-				static_cast<float>(sect->startx) + ix+1, sect->ytable[ix+1][iz  ], static_cast<float>(sect->startz) + iz  ,
-				static_cast<float>(sect->startx) + ix  , sect->ytable[ix  ][iz+1], static_cast<float>(sect->startz) + iz+1,
+			sect->vertexdata[i++] = std::array<vec3, 3>{
+				sx + ix+1, sect->y_table[ix+1][iz+1], sz + iz+1,
+				sx + ix+1, sect->y_table[ix+1][iz  ], sz + iz  ,
+				sx + ix  , sect->y_table[ix  ][iz+1], sz + iz+1,
 			};
-			memcpy(*ptr++, triangle1, sizeof triangle1);
-			memcpy(*ptr++, triangle2, sizeof triangle2);
 		}
 	}
-	SDL_assert(ptr == sect->vertexdata + sizeof(sect->vertexdata)/sizeof(sect->vertexdata[0]));
+	SDL_assert(i == sect->vertexdata.size());
 
-	sect->ytableready = true;
+	sect->y_table_and_vertexdata_ready = true;
 }
 
 // round down to multiple of SECTION_SIZE
@@ -351,7 +356,7 @@ float map_getheight(struct Map *map, float x, float z)
 	make_room_for_more_sections(map, 9);
 
 	struct Section *sect = find_or_add_section(map, get_section_start_coordinate(x), get_section_start_coordinate(z));
-	ensure_ytable_is_ready(map, sect);
+	ensure_y_table_is_ready(map, sect);
 
 	float ixfloat = x - sect->startx;
 	float izfloat = z - sect->startz;
@@ -362,10 +367,10 @@ float map_getheight(struct Map *map, float x, float z)
 	float u = izfloat - iz;
 
 	// weighted average, weight describes how close to a given corner
-	return (1-t)*(1-u)*sect->ytable[ix][iz]
-		+ (1-t)*u*sect->ytable[ix][iz+1]
-		+ t*(1-u)*sect->ytable[ix+1][iz]
-		+ t*u*sect->ytable[ix+1][iz+1];
+	return (1-t)*(1-u)*sect->y_table[ix][iz]
+		+ (1-t)*u*sect->y_table[ix][iz+1]
+		+ t*(1-u)*sect->y_table[ix+1][iz]
+		+ t*u*sect->y_table[ix+1][iz+1];
 }
 
 mat3 map_get_rotation(struct Map *map, float x, float z)
@@ -424,7 +429,7 @@ void map_render(struct Map *map, const struct Camera *cam)
 		glGenBuffers(1, &map->vbo);
 		SDL_assert(map->vbo != 0);
 		glBindBuffer(GL_ARRAY_BUFFER, map->vbo);
-		glBufferData(GL_ARRAY_BUFFER, maxsections*sizeof(((struct Section*)NULL)->vertexdata), NULL, GL_DYNAMIC_DRAW);
+		glBufferData(GL_ARRAY_BUFFER, maxsections*sizeof(((Section*)NULL)->vertexdata), NULL, GL_DYNAMIC_DRAW);
 		glBindBuffer(GL_ARRAY_BUFFER, 0);
 	}
 
@@ -434,8 +439,8 @@ void map_render(struct Map *map, const struct Camera *cam)
 		for (int startz = startzmin; startz <= startzmax; startz += SECTION_SIZE) {
 			// TODO: don't send all vertexdata to gpu, if same section still visible as last time?
 			struct Section *sect = find_or_add_section(map, startx, startz);
-			ensure_ytable_is_ready(map, sect);
-			glBufferSubData(GL_ARRAY_BUFFER, i++*sizeof(sect->vertexdata), sizeof(sect->vertexdata), sect->vertexdata);
+			ensure_y_table_is_ready(map, sect);
+			glBufferSubData(GL_ARRAY_BUFFER, i++*sizeof(sect->vertexdata), sizeof(sect->vertexdata), sect->vertexdata.data());
 		}
 	}
 	SDL_assert(i == nsections);

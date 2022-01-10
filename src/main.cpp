@@ -14,8 +14,6 @@ int main(int argc, char **argv)
     (void)argc;
     (void)argv;
 
-	srand(time(NULL));
-
 	struct OpenglBoilerplateState bpstate = opengl_boilerplate_init();
 
 	struct Map *map = map_new();
