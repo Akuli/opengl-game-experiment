@@ -17,8 +17,8 @@ struct Section {
 
 	/*
 	y = yscale*e^(-(((x - centerx) / xzscale)^2 + ((z - centerz) / xzscale)^2))
-	yscale can be negative, xzscale can't, center must be within map
-	center coords are relative to section start, so that sections are easy to move
+	yscale can be negative, xzscale can't
+	center coords are within the section and relative to section start, not depending on location of section
 	*/
 	struct GaussianCurveMountain { float xzscale,yscale,centerx,centerz; } mountains[100];
 
