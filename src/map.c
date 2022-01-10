@@ -1,6 +1,9 @@
 #include "map.h"
 #include <GL/glew.h>
 #include <SDL2/SDL.h>
+#include <string.h>
+#include <stdlib.h>
+#include <stdbool.h>
 #include <math.h>
 #include "camera.h"
 #include "log.h"

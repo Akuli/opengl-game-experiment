@@ -29,4 +29,8 @@ clean:
 	rm -rf obj
 	rm -f game
 
+.PHONY: iwyu
+iwyu:
+	$(MAKE) -f Makefile.iwyu
+
 -include $(DEPENDS)

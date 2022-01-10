@@ -2,9 +2,10 @@
 #include <GL/glew.h>
 #include <SDL2/SDL.h>
 #include <math.h>
-#include "assert.h"
+#include <stdbool.h>
+#include <stddef.h>
 #include "camera.h"
-#include "log.h"
+#include "linalg.h"
 #include "map.h"
 #include "opengl_boilerplate.h"
 
@@ -64,25 +65,25 @@ static vec4 *get_vertex_data(int *npoints)
 	return &vertexdata[0][0];
 }
 
-void enemy_render(const struct Enemy *enemy, const struct Camera *cam, struct Map *map)
+void enemy_render(const struct Enemy *en, const struct Camera *cam, struct Map *map)
 {
-	glUseProgram(enemy->shaderprogram);
+	glUseProgram(en->shaderprogram);
 
 	vec3 v = vec3_sub((vec3){0,map_getheight(map, 0, 0),0}, cam->location);
 	glUniform3f(
-		glGetUniformLocation(enemy->shaderprogram, "addToLocation"),
+		glGetUniformLocation(en->shaderprogram, "addToLocation"),
 		v.x, v.y, v.z);
 	glUniformMatrix3fv(
-		glGetUniformLocation(enemy->shaderprogram, "world2cam"),
+		glGetUniformLocation(en->shaderprogram, "world2cam"),
 		1, true, &cam->world2cam.rows[0][0]);
 	glUniformMatrix3fv(
-		glGetUniformLocation(enemy->shaderprogram, "mapRotation"),
+		glGetUniformLocation(en->shaderprogram, "mapRotation"),
 		1, true, &map_get_rotation(map, 0, 0).rows[0][0]);
 
 	int npoints;
 	get_vertex_data(&npoints);
 
-	glBindBuffer(GL_ARRAY_BUFFER, enemy->vbo);
+	glBindBuffer(GL_ARRAY_BUFFER, en->vbo);
 	glEnableVertexAttribArray(0);
 	glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 0, 0);
 	glDrawArrays(GL_TRIANGLES, 0, npoints);
@@ -127,7 +128,8 @@ struct Enemy enemy_new(void)
 	return enemy;
 }
 
-void enemy_destroy(const struct Enemy *enemy)
+void enemy_destroy(const struct Enemy *en)
 {
-	// TODO: delete some of the opengl stuff?
+	glDeleteProgram(en->shaderprogram);
+	glDeleteBuffers(1, &en->vbo);
 }

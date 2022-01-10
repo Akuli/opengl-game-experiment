@@ -1,6 +1,4 @@
 #include <math.h>
-#include <string.h>
-#include <SDL2/SDL.h>
 #include "linalg.h"
 
 extern inline vec2 vec2_add(vec2 a, vec2 b);

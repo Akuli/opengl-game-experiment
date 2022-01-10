@@ -1,7 +1,6 @@
 #ifndef CAMERA_H
 #define CAMERA_H
 
-#include <SDL2/SDL.h>
 #include "linalg.h"
 
 // surfaces can be smaller than this, but these are handy for array sizes
