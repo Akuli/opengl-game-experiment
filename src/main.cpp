@@ -20,7 +20,7 @@ int main(int argc, char **argv)
 
 	struct Map *map = map_new();
 	struct Enemy en = enemy_new();
-	struct Camera cam;
+	struct Camera cam = {};
 
 	int zdir = 0;
 	int angledir = 0;
