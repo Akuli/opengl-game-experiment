@@ -44,7 +44,7 @@ static void transpose(mat3 *M)
 	swap(&M->rows[2][1], &M->rows[1][2]);
 }
 
-void plane_apply_mat3_INVERSE(struct Plane *pl, mat3 inverse)
+void plane_apply_mat3_INVERSE(Plane *pl, mat3 inverse)
 {
 	/*
 	The plane equation can be written as ax+by+cz = constant. By thinking of
@@ -84,7 +84,7 @@ void plane_apply_mat3_INVERSE(struct Plane *pl, mat3 inverse)
 	pl->normal = inverse * pl->normal;
 }
 
-void plane_move(struct Plane *pl, vec3 mv)
+void plane_move(Plane *pl, vec3 mv)
 {
 	pl->constant += pl->normal.dot(mv);
 }

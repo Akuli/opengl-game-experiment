@@ -56,7 +56,7 @@ static const std::vector<std::array<vec4, 3>>& get_vertex_data()
 	return vertexdata;
 }
 
-void enemy_render(const struct Enemy *en, const struct Camera *cam, Map& map)
+void enemy_render(const Enemy *en, const Camera *cam, Map& map)
 {
 	glUseProgram(en->shaderprogram);
 
@@ -80,7 +80,7 @@ void enemy_render(const struct Enemy *en, const struct Camera *cam, Map& map)
 	glUseProgram(0);
 }
 
-struct Enemy enemy_new(void)
+Enemy enemy_new(void)
 {
 	Enemy enemy;
 
@@ -115,7 +115,7 @@ struct Enemy enemy_new(void)
 	return enemy;
 }
 
-void enemy_destroy(const struct Enemy *en)
+void enemy_destroy(const Enemy *en)
 {
 	glDeleteProgram(en->shaderprogram);
 	glDeleteBuffers(1, &en->vbo);

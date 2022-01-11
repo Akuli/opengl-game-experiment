@@ -10,8 +10,8 @@ struct Enemy {
 	GLuint vbo;  // Vertex Buffer Object, represents triangles going to gpu
 };
 
-struct Enemy enemy_new(void);
-void enemy_destroy(const struct Enemy *enemy);
-void enemy_render(const struct Enemy *en, const struct Camera *cam, Map& map);
+Enemy enemy_new(void);
+void enemy_destroy(const Enemy *enemy);
+void enemy_render(const Enemy *en, const Camera *cam, Map& map);
 
 #endif

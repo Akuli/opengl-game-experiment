@@ -55,7 +55,7 @@ static float uniform_random_float(float min, float max)
 	return lerp(min, max, std::rand() / (float)RAND_MAX);
 }
 
-static void generate_section(struct Section& section)
+static void generate_section(Section& section)
 {
 	section.y_table_and_vertexdata_ready = false;
 	int i;
@@ -166,7 +166,7 @@ struct MapPrivate {
 	// TODO: why does unique_ptr not work here?
 	std::unordered_map<std::pair<int, int>, std::unique_ptr<Section>, IntPairHasher> sections;
 
-	struct SectionQueue queue;
+	SectionQueue queue;
 	SDL_Thread *prepthread;
 
 	GLuint shaderprogram;
@@ -206,12 +206,12 @@ static Section *find_or_add_section(MapPrivate& map, int startx, int startz)
 	return &*map.sections[key];
 }
 
-static void ensure_y_table_is_ready(MapPrivate& map, struct Section *section)
+static void ensure_y_table_is_ready(MapPrivate& map, Section *section)
 {
 	if (section->y_table_and_vertexdata_ready)
 		return;
 
-	struct Section *sections[9] = {
+	Section *sections[9] = {
 		find_or_add_section(map, section->startx - SECTION_SIZE, section->startz - SECTION_SIZE),
 		find_or_add_section(map, section->startx - SECTION_SIZE, section->startz),
 		find_or_add_section(map, section->startx - SECTION_SIZE, section->startz + SECTION_SIZE),
@@ -226,7 +226,7 @@ static void ensure_y_table_is_ready(MapPrivate& map, struct Section *section)
 	for (int xidx = 0; xidx <= SECTION_SIZE; xidx++) {
 		for (int zidx = 0; zidx <= SECTION_SIZE; zidx++) {
 			float y = 0;
-			for (struct Section **s = sections; s < sections+9; s++) {
+			for (Section **s = sections; s < sections+9; s++) {
 				int xdiff = section->startx - (*s)->startx;
 				int zdiff = section->startz - (*s)->startz;
 				int ix = xidx + SECTION_SIZE + xdiff;
@@ -268,7 +268,7 @@ static int get_section_start_coordinate(float val)
 
 float Map::get_height(float x, float z)
 {
-	struct Section *section = find_or_add_section(*this->priv, get_section_start_coordinate(x), get_section_start_coordinate(z));
+	Section *section = find_or_add_section(*this->priv, get_section_start_coordinate(x), get_section_start_coordinate(z));
 	ensure_y_table_is_ready(*this->priv, section);
 
 	float ixfloat = x - section->startx;
@@ -348,7 +348,7 @@ void Map::render(const Camera& cam)
 	for (int startx = startxmin; startx <= startxmax; startx += SECTION_SIZE) {
 		for (int startz = startzmin; startz <= startzmax; startz += SECTION_SIZE) {
 			// TODO: don't send all vertexdata to gpu, if same section still visible as last time?
-			struct Section *section = find_or_add_section(*this->priv, startx, startz);
+			Section *section = find_or_add_section(*this->priv, startx, startz);
 			ensure_y_table_is_ready(*this->priv, section);
 			glBufferSubData(GL_ARRAY_BUFFER, i++*sizeof(section->vertexdata), sizeof(section->vertexdata), section->vertexdata.data());
 		}

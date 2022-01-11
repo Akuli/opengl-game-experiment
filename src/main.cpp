@@ -18,9 +18,9 @@ int main(int argc, char **argv)
 
 	OpenglBoilerplate boilerplate = {};
 
-	struct Map map = {};
-	struct Enemy en = enemy_new();
-	struct Camera cam = {};
+	Map map = {};
+	Enemy en = enemy_new();
+	Camera cam = {};
 
 	int zdir = 0;
 	int angledir = 0;
