@@ -18,7 +18,7 @@ int main(int argc, char **argv)
 
 	struct OpenglBoilerplateState bpstate = opengl_boilerplate_init();
 
-	struct Map *map = map_new();
+	struct Map map = {};
 	struct Enemy en = enemy_new();
 	struct Camera cam = {};
 
@@ -34,19 +34,18 @@ int main(int argc, char **argv)
 
 		// FIXME: move amount should depend on fps
 		cam.location += cam.cam2world * vec3{0,0,0.3f*zdir};
-		cam.location.y = map_getheight(map, cam.location.x, cam.location.z) + 5;
+		cam.location.y = map.get_height(cam.location.x, cam.location.z) + 5;
 
 		glClearColor(0, 0, 0, 0);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		map_render(map, &cam);
+		map.render(cam);
 		enemy_render(&en, &cam, map);
 		SDL_GL_SwapWindow(bpstate.window);
 
 		SDL_Event e;
 		while (SDL_PollEvent(&e)) switch(e.type) {
 			case SDL_QUIT:
-				map_destroy(map);
 				enemy_destroy(&en);
 				opengl_boilerplate_quit(&bpstate);
 				return 0;

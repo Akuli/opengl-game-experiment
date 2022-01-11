@@ -56,11 +56,11 @@ static const std::vector<std::array<vec4, 3>>& get_vertex_data()
 	return vertexdata;
 }
 
-void enemy_render(const struct Enemy *en, const struct Camera *cam, struct Map *map)
+void enemy_render(const struct Enemy *en, const struct Camera *cam, Map& map)
 {
 	glUseProgram(en->shaderprogram);
 
-	vec3 v = vec3{0,map_getheight(map, 0, 0),0} - cam->location;
+	vec3 v = vec3{0,map.get_height(0, 0),0} - cam->location;
 	glUniform3f(
 		glGetUniformLocation(en->shaderprogram, "addToLocation"),
 		v.x, v.y, v.z);
@@ -69,7 +69,7 @@ void enemy_render(const struct Enemy *en, const struct Camera *cam, struct Map *
 		1, true, &cam->world2cam.rows[0][0]);
 	glUniformMatrix3fv(
 		glGetUniformLocation(en->shaderprogram, "mapRotation"),
-		1, true, &map_get_rotation(map, 0, 0).rows[0][0]);
+		1, true, &map.get_rotation_matrix(0, 0).rows[0][0]);
 
 	glBindBuffer(GL_ARRAY_BUFFER, en->vbo);
 	glEnableVertexAttribArray(0);

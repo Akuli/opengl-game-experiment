@@ -163,7 +163,7 @@ struct IntPairHasher {
 	}
 };
 
-struct Map {
+struct MapPrivate {
 	// TODO: why does unique_ptr not work here?
 	std::unordered_map<std::pair<int, int>, std::unique_ptr<Section>, IntPairHasher> sections;
 
@@ -174,23 +174,23 @@ struct Map {
 	GLuint vbo;  // Vertex Buffer Object, represents triangles going to gpu
 };
 
-static Section *find_or_add_section(Map *map, int startx, int startz)
+static Section *find_or_add_section(MapPrivate& map, int startx, int startz)
 {
 	std::pair<int, int> key = { startx, startz };
 
-	if (map->sections.find(std::make_pair(startx, startz)) == map->sections.end()) {
+	if (map.sections.find(std::make_pair(startx, startz)) == map.sections.end()) {
 		// Wait until there is an item in the queue
 		while(1) {
-			int ret = SDL_LockMutex(map->queue.lock);
+			int ret = SDL_LockMutex(map.queue.lock);
 			SDL_assert(ret == 0);
 
-			bool empty = map->queue.sections.empty();
+			bool empty = map.queue.sections.empty();
 			if (!empty) {
-				map->sections[key] = std::move(map->queue.sections.end()[-1]);
-				map->queue.sections.pop_back();
+				map.sections[key] = std::move(map.queue.sections.end()[-1]);
+				map.queue.sections.pop_back();
 			}
 
-			ret = SDL_UnlockMutex(map->queue.lock);
+			ret = SDL_UnlockMutex(map.queue.lock);
 			SDL_assert(ret == 0);
 
 			if (empty)
@@ -199,15 +199,15 @@ static Section *find_or_add_section(Map *map, int startx, int startz)
 				break;
 		}
 
-		map->sections[key]->startx = startx;
-		map->sections[key]->startz = startz;
-		log_printf("added a section, map now has %d sections", (int)map->sections.size());
+		map.sections[key]->startx = startx;
+		map.sections[key]->startz = startz;
+		log_printf("added a section, map now has %d sections", (int)map.sections.size());
 	}
 
-	return &*map->sections[key];
+	return &*map.sections[key];
 }
 
-static void ensure_y_table_is_ready(struct Map *map, struct Section *section)
+static void ensure_y_table_is_ready(MapPrivate& map, struct Section *section)
 {
 	if (section->y_table_and_vertexdata_ready)
 		return;
@@ -267,10 +267,10 @@ static int get_section_start_coordinate(float val)
 	return (int)floorf(val / SECTION_SIZE) * SECTION_SIZE;
 }
 
-float map_getheight(struct Map *map, float x, float z)
+float Map::get_height(float x, float z)
 {
-	struct Section *section = find_or_add_section(map, get_section_start_coordinate(x), get_section_start_coordinate(z));
-	ensure_y_table_is_ready(map, section);
+	struct Section *section = find_or_add_section(*this->priv, get_section_start_coordinate(x), get_section_start_coordinate(z));
+	ensure_y_table_is_ready(*this->priv, section);
 
 	float ixfloat = x - section->startx;
 	float izfloat = z - section->startz;
@@ -287,12 +287,12 @@ float map_getheight(struct Map *map, float x, float z)
 		+ t*u*section->y_table[ix+1][iz+1];
 }
 
-mat3 map_get_rotation(struct Map *map, float x, float z)
+mat3 Map::get_rotation_matrix(float x, float z)
 {
 	// a bit of a hack, but works well enough
 	float h = 0.01f;
-	vec3 v = { 2*h, map_getheight(map,x+h,z) - map_getheight(map,x-h,z), 0 };
-	vec3 w = { 0, map_getheight(map,x,z+h) - map_getheight(map,x,z-h), 2*h };
+	vec3 v = { 2*h, this->get_height(x+h,z) - this->get_height(x-h,z), 0 };
+	vec3 w = { 0, this->get_height(x,z+h) - this->get_height(x,z-h), 2*h };
 
 	// Ensure that v and w are perpendicular and length 1
 	// https://en.wikipedia.org/wiki/Gram%E2%80%93Schmidt_process
@@ -310,23 +310,23 @@ mat3 map_get_rotation(struct Map *map, float x, float z)
 	return res;
 }
 
-void map_render(struct Map *map, const struct Camera *cam)
+void Map::render(const Camera& cam)
 {
-	glUseProgram(map->shaderprogram);
+	glUseProgram(this->priv->shaderprogram);
 	glUniform3f(
-		glGetUniformLocation(map->shaderprogram, "cameraLocation"),
-		cam->location.x, cam->location.y, cam->location.z);
+		glGetUniformLocation(this->priv->shaderprogram, "cameraLocation"),
+		cam.location.x, cam.location.y, cam.location.z);
 	glUniformMatrix3fv(
-		glGetUniformLocation(map->shaderprogram, "world2cam"),
-		1, true, &cam->world2cam.rows[0][0]);
+		glGetUniformLocation(this->priv->shaderprogram, "world2cam"),
+		1, true, &cam.world2cam.rows[0][0]);
 
 	// If you change this, also change the shader in opengl_boilerplate.c
 	int r = 80;
 
-	int startxmin = get_section_start_coordinate(cam->location.x - r);
-	int startxmax = get_section_start_coordinate(cam->location.x + r);
-	int startzmin = get_section_start_coordinate(cam->location.z - r);
-	int startzmax = get_section_start_coordinate(cam->location.z + r);
+	int startxmin = get_section_start_coordinate(cam.location.x - r);
+	int startxmax = get_section_start_coordinate(cam.location.x + r);
+	int startzmin = get_section_start_coordinate(cam.location.z - r);
+	int startzmax = get_section_start_coordinate(cam.location.z + r);
 
 	// +1 because both ends inlusive
 	int nx = (startxmax - startxmin)/SECTION_SIZE + 1;
@@ -336,21 +336,21 @@ void map_render(struct Map *map, const struct Camera *cam)
 	int maxsections = ((2*r)/SECTION_SIZE + 2)*((2*r)/SECTION_SIZE + 2);
 	SDL_assert(nsections <= maxsections);
 
-	if (map->vbo == 0) {
-		glGenBuffers(1, &map->vbo);
-		SDL_assert(map->vbo != 0);
-		glBindBuffer(GL_ARRAY_BUFFER, map->vbo);
+	if (this->priv->vbo == 0) {
+		glGenBuffers(1, &this->priv->vbo);
+		SDL_assert(this->priv->vbo != 0);
+		glBindBuffer(GL_ARRAY_BUFFER, this->priv->vbo);
 		glBufferData(GL_ARRAY_BUFFER, maxsections*sizeof(((Section*)NULL)->vertexdata), NULL, GL_DYNAMIC_DRAW);
 		glBindBuffer(GL_ARRAY_BUFFER, 0);
 	}
 
-	glBindBuffer(GL_ARRAY_BUFFER, map->vbo);
+	glBindBuffer(GL_ARRAY_BUFFER, this->priv->vbo);
 	int i = 0;
 	for (int startx = startxmin; startx <= startxmax; startx += SECTION_SIZE) {
 		for (int startz = startzmin; startz <= startzmax; startz += SECTION_SIZE) {
 			// TODO: don't send all vertexdata to gpu, if same section still visible as last time?
-			struct Section *section = find_or_add_section(map, startx, startz);
-			ensure_y_table_is_ready(map, section);
+			struct Section *section = find_or_add_section(*this->priv, startx, startz);
+			ensure_y_table_is_ready(*this->priv, section);
 			glBufferSubData(GL_ARRAY_BUFFER, i++*sizeof(section->vertexdata), sizeof(section->vertexdata), section->vertexdata.data());
 		}
 	}
@@ -365,16 +365,14 @@ void map_render(struct Map *map, const struct Camera *cam)
 	glUseProgram(0);
 }
 
-struct Map *map_new(void)
+Map::Map()
 {
-	Map *map = new Map;
-	*map = Map{};
+	this->priv = std::make_unique<MapPrivate>();
+	this->priv->queue.lock = SDL_CreateMutex();
+	SDL_assert(this->priv->queue.lock);
 
-	map->queue.lock = SDL_CreateMutex();
-	SDL_assert(map->queue.lock);
-
-	map->prepthread = SDL_CreateThread(section_preparing_thread, "NameOfTheMapSectionGeneratorThread", &map->queue);
-	SDL_assert(map->prepthread);
+	this->priv->prepthread = SDL_CreateThread(section_preparing_thread, "NameOfTheMapSectionGeneratorThread", &this->priv->queue);
+	SDL_assert(this->priv->prepthread);
 
 	const char *vertex_shader =
 		"#version 330\n"
@@ -399,15 +397,12 @@ struct Map *map_new(void)
 		"    vertexToFragmentColor = darkerAtDistance(rgb, pos);\n"
 		"}\n"
 		;
-	map->shaderprogram = opengl_boilerplate_create_shader_program(vertex_shader, NULL);
-
-	return map;
+	this->priv->shaderprogram = opengl_boilerplate_create_shader_program(vertex_shader, NULL);
 }
 
-// TODO: delete some of the opengl stuff?
-void map_destroy(struct Map *map)
+Map::~Map()
 {
-	map->queue.quit = true;
-	SDL_WaitThread(map->prepthread, NULL);
-	delete map;
+	// TODO: delete some of the opengl stuff?
+	this->priv->queue.quit = true;
+	SDL_WaitThread(this->priv->prepthread, NULL);
 }

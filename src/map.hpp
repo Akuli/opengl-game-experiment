@@ -4,15 +4,26 @@
 #include "camera.hpp"
 #include "linalg.hpp"
 
-struct Map;  // IWYU pragma: keep
+#include <memory>
 
-Map *map_new(void);
-void map_destroy(Map *map);
-float map_getheight(Map *map, float x, float z);
-void map_render(Map *map, const struct Camera *cam);
+// not gonna shit all over my h++ file with private structs and methods, sorry
+struct MapPrivate;
 
-// If the floor has constant height, returns identity matrix.
-// In general, returns a rotation that maps (0,1,0) to be perpendicular to the map.
-mat3 map_get_rotation(Map *map, float x, float z);
+class Map {
+public:
+	Map();
+	~Map();
+	Map(const Map&) = delete;
+
+	float get_height(float x, float z);
+	void render(const Camera& camera);
+
+	// If the floor has constant height, returns identity matrix.
+	// In general, returns a rotation that maps (0,1,0) to be perpendicular to the map.
+	mat3 get_rotation_matrix(float x, float z);
+
+private:
+	std::unique_ptr<MapPrivate> priv;
+};
 
 #endif

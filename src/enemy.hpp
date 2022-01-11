@@ -12,6 +12,6 @@ struct Enemy {
 
 struct Enemy enemy_new(void);
 void enemy_destroy(const struct Enemy *enemy);
-void enemy_render(const struct Enemy *enemy, const struct Camera *cam, struct Map *map);
+void enemy_render(const struct Enemy *en, const struct Camera *cam, Map& map);
 
 #endif
