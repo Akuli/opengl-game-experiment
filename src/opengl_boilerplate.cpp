@@ -122,7 +122,7 @@ OpenglBoilerplate::OpenglBoilerplate()
 
 	// This makes our buffer swap syncronized with the monitor's vertical refresh.
 	// Fails when using software rendering (see README)
-	int ret = SDL_GL_SetSwapInterval(1);
+	ret = SDL_GL_SetSwapInterval(1);
 	if (ret != 0)
 		log_printf("SDL_GL_SetSwapInterval failed: %s", SDL_GetError());
 
