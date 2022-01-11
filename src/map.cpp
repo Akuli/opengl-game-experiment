@@ -163,7 +163,6 @@ struct IntPairHasher {
 };
 
 struct MapPrivate {
-	// TODO: why does unique_ptr not work here?
 	std::unordered_map<std::pair<int, int>, std::unique_ptr<Section>, IntPairHasher> sections;
 
 	SectionQueue queue;
