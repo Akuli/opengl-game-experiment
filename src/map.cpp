@@ -52,12 +52,7 @@ struct Section {
 
 static float uniform_random_float(float min, float max)
 {
-	static std::default_random_engine random_engine = {};
-	static bool ready = false;
-	if (!ready)
-		random_engine.seed(time(NULL));
-	ready = true;
-	return std::uniform_real_distribution<float>(min, max)(random_engine);
+	return lerp(min, max, std::rand() / (float)RAND_MAX);
 }
 
 static void generate_section(struct Section *sect)

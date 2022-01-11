@@ -2,7 +2,7 @@
 #include <SDL2/SDL.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <time.h>
+#include <ctime>
 #include "map.hpp"
 #include "camera.hpp"
 #include "linalg.hpp"
@@ -13,6 +13,8 @@ int main(int argc, char **argv)
 {
     (void)argc;
     (void)argv;
+
+	std::srand(std::time(NULL));
 
 	struct OpenglBoilerplateState bpstate = opengl_boilerplate_init();
 
