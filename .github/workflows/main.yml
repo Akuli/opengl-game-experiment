@@ -5,7 +5,7 @@ on:
   pull_request:
 
 env:
-  APT_PACKAGES: "gcc make libsdl2-dev libglew-dev"
+  APT_PACKAGES: "g++ make libsdl2-dev libglew-dev"
 
 jobs:
   linux-build:

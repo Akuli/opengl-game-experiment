@@ -1,7 +1,7 @@
 #ifndef CAMERA_H
 #define CAMERA_H
 
-#include "linalg.h"
+#include "linalg.hpp"
 
 // surfaces can be smaller than this, but these are handy for array sizes
 #define CAMERA_SCREEN_WIDTH 800

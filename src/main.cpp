@@ -1,23 +1,24 @@
 #include <GL/glew.h>
 #include <SDL2/SDL.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <time.h>
-#include "map.h"
-#include "camera.h"
-#include "linalg.h"
-#include "opengl_boilerplate.h"
-#include "enemy.h"
+#include <cstdlib>
+#include <ctime>
+#include "map.hpp"
+#include "camera.hpp"
+#include "linalg.hpp"
+#include "opengl_boilerplate.hpp"
+#include "enemy.hpp"
 
-int main(void)
+int main(int argc, char **argv)
 {
-	srand(time(NULL));
+	(void)argc;
+	(void)argv;
 
-	struct OpenglBoilerplateState bpstate = opengl_boilerplate_init();
+	std::srand(std::time(nullptr));
 
-	struct Map *map = map_new();
-	struct Enemy en = enemy_new();
-	struct Camera cam = {0};
+	OpenglBoilerplate boilerplate = {};
+	Map map = {};
+	Enemy enemy = {};
+	Camera camera = {};
 
 	int zdir = 0;
 	int angledir = 0;
@@ -26,26 +27,23 @@ int main(void)
 	while (1) {
 		// FIXME: turn amount should depend on fps
 		angle += 0.03f*angledir;
-		cam.cam2world = mat3_rotation_xz(angle);
-		cam.world2cam = mat3_rotation_xz(-angle);
+		camera.cam2world = mat3::rotation_about_y(angle);
+		camera.world2cam = mat3::rotation_about_y(-angle);
 
 		// FIXME: move amount should depend on fps
-		vec3_add_inplace(&cam.location, mat3_mul_vec3(cam.cam2world, (vec3){0,0,0.3f*zdir}));
-		cam.location.y = map_getheight(map, cam.location.x, cam.location.z) + 5;
+		camera.location += camera.cam2world * vec3{0,0,0.3f*zdir};
+		camera.location.y = map.get_height(camera.location.x, camera.location.z) + 5;
 
 		glClearColor(0, 0, 0, 0);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		map_render(map, &cam);
-		enemy_render(&en, &cam, map);
-		SDL_GL_SwapWindow(bpstate.window);
+		map.render(camera);
+		enemy.render(camera, map);
+		SDL_GL_SwapWindow(boilerplate.window);
 
 		SDL_Event e;
 		while (SDL_PollEvent(&e)) switch(e.type) {
 			case SDL_QUIT:
-				map_destroy(map);
-				enemy_destroy(&en);
-				opengl_boilerplate_quit(&bpstate);
 				return 0;
 
 			case SDL_KEYDOWN:
