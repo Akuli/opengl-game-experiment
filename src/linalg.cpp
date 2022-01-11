@@ -30,18 +30,11 @@ mat3 mat3::rotation_about_y(float angle)
 	};
 }
 
-static void swap(float *a, float *b)
+static void transpose(mat3& M)
 {
-	float tmp = *a;
-	*a = *b;
-	*b = tmp;
-}
-
-static void transpose(mat3 *M)
-{
-	swap(&M->rows[1][0], &M->rows[0][1]);
-	swap(&M->rows[2][0], &M->rows[0][2]);
-	swap(&M->rows[2][1], &M->rows[1][2]);
+	std::swap(M.rows[1][0], M.rows[0][1]);
+	std::swap(M.rows[2][0], M.rows[0][2]);
+	std::swap(M.rows[2][1], M.rows[1][2]);
 }
 
 void Plane::apply_matrix_INVERSE(mat3 inverse)
@@ -80,7 +73,7 @@ void Plane::apply_matrix_INVERSE(mat3 inverse)
 		[a b c] M^-1 = | (M^-1)   |  b  | |
 		               \          |_ c _| /
 	*/
-	transpose(&inverse);
+	transpose(inverse);
 	this->normal = inverse * this->normal;
 }
 
