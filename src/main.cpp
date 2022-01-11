@@ -10,16 +10,16 @@
 
 int main(int argc, char **argv)
 {
-    (void)argc;
-    (void)argv;
+	(void)argc;
+	(void)argv;
 
 	std::srand(std::time(nullptr));
 
 	OpenglBoilerplate boilerplate = {};
 
 	Map map = {};
-	Enemy en = {};
-	Camera cam = {};
+	Enemy enemy = {};
+	Camera camera = {};
 
 	int zdir = 0;
 	int angledir = 0;
@@ -28,18 +28,18 @@ int main(int argc, char **argv)
 	while (1) {
 		// FIXME: turn amount should depend on fps
 		angle += 0.03f*angledir;
-		cam.cam2world = mat3::rotation_about_y(angle);
-		cam.world2cam = mat3::rotation_about_y(-angle);
+		camera.cam2world = mat3::rotation_about_y(angle);
+		camera.world2cam = mat3::rotation_about_y(-angle);
 
 		// FIXME: move amount should depend on fps
-		cam.location += cam.cam2world * vec3{0,0,0.3f*zdir};
-		cam.location.y = map.get_height(cam.location.x, cam.location.z) + 5;
+		camera.location += camera.cam2world * vec3{0,0,0.3f*zdir};
+		camera.location.y = map.get_height(camera.location.x, camera.location.z) + 5;
 
 		glClearColor(0, 0, 0, 0);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		map.render(cam);
-		en.render(cam, map);
+		map.render(camera);
+		enemy.render(camera, map);
 		SDL_GL_SwapWindow(boilerplate.window);
 
 		SDL_Event e;
