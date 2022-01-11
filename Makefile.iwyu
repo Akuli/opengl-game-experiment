@@ -1,5 +1,6 @@
 FLAGS += -Xiwyu --mapping_file=iwyumappings.imp
 FLAGS += -Xiwyu --no_fwd_decls
+FLAGS += $(shell cat compile_flags.txt)
 
 # Hide stuff that C compilers warn about anyway
 FLAGS += -Wno-static-local-in-inline -Wno-absolute-value
@@ -8,7 +9,7 @@ FLAGS += -Wno-static-local-in-inline -Wno-absolute-value
 # But begin_code.h is in /usr/include/SDL2. I have no idea why.
 FLAGS += -I/usr/include/SDL2
 
-SRC := $(wildcard src/*.c src/*.h)
+SRC := $(wildcard src/*.cpp src/*.hpp)
 
 all: $(SRC)
 

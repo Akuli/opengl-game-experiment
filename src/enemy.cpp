@@ -1,11 +1,11 @@
 #include "enemy.hpp"
 #include <GL/glew.h>
 #include <SDL2/SDL.h>
-#include <math.h>
 #include <array>
+#include <cmath>
+#include <memory>
+#include <string>
 #include <vector>
-#include <stdbool.h>
-#include <stddef.h>
 #include "camera.hpp"
 #include "linalg.hpp"
 #include "map.hpp"

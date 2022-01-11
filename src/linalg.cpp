@@ -1,5 +1,5 @@
 #include "linalg.hpp"
-#include <cmath>
+#include <cmath>  // IWYU pragma: keep
 
 float mat3::det() const
 {

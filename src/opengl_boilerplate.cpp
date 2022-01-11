@@ -1,7 +1,5 @@
 #include <GL/glew.h>
 #include <SDL2/SDL.h>
-#include <stdlib.h>
-#include <string.h>
 #include "log.hpp"
 #include "opengl_boilerplate.hpp"
 #include "camera.hpp"

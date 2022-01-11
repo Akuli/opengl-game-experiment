@@ -1,7 +1,6 @@
 #include <GL/glew.h>
 #include <SDL2/SDL.h>
-#include <stdio.h>
-#include <stdlib.h>
+#include <cstdlib>
 #include <ctime>
 #include "map.hpp"
 #include "camera.hpp"
