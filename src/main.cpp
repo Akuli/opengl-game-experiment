@@ -16,7 +16,6 @@ int main(int argc, char **argv)
 	std::srand(std::time(nullptr));
 
 	OpenglBoilerplate boilerplate = {};
-
 	Map map = {};
 	Enemy en = {};
 	Camera cam = {};
