@@ -404,4 +404,5 @@ Map::~Map()
 	// TODO: delete some of the opengl stuff?
 	this->priv->queue.quit = true;
 	SDL_WaitThread(this->priv->prepthread, NULL);
+	SDL_DestroyMutex(this->priv->queue.lock);
 }

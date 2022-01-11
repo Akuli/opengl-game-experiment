@@ -96,7 +96,8 @@ GLuint OpenglBoilerplate::create_shader_program(const std::string& vertex_shader
 
 OpenglBoilerplate::OpenglBoilerplate()
 {
-	SDL_assert(SDL_Init(SDL_INIT_VIDEO) == 0);
+	int ret = SDL_Init(SDL_INIT_VIDEO);
+	SDL_assert(ret == 0);
 
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
