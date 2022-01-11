@@ -48,9 +48,8 @@ static GLuint create_shader(GLenum type, const char *source, const char *shadern
 	if (status == GL_FALSE) {
 		GLint loglen;
 		glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &loglen);
-		char *log = calloc(1, loglen+1);
-		SDL_assert(log);
-		glGetShaderInfoLog(shader, loglen, NULL, log);
+		char log[1000] = {0};
+		glGetShaderInfoLog(shader, sizeof log - 1, NULL, log);
 		log_printf_abort("compiling shader \"%s\" failed: %s", shadername, log);
 	}
 
@@ -67,9 +66,8 @@ static void link_program(GLuint prog)
 	if (status == GL_FALSE) {
 		GLint loglen;
 		glGetProgramiv(prog, GL_INFO_LOG_LENGTH, &loglen);
-		char *log = calloc(1, loglen+1);
-		SDL_assert(log);
-		glGetProgramInfoLog(prog, loglen, NULL, log);
+		char log[1000] = {0};
+		glGetProgramInfoLog(prog, sizeof log - 1, NULL, log);
 		log_printf_abort("linking shader program failed: %s", log);
 	}
 }
