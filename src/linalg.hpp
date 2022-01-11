@@ -93,7 +93,7 @@ public:
 	float det() const;
 };
 
-// should be safe to memcpy() between vectors/matrices and float arrays
+// should be safe to pass vector objects to opengl
 static_assert(sizeof(vec2) == 2*sizeof(float));
 static_assert(sizeof(vec3) == 3*sizeof(float));
 static_assert(sizeof(vec4) == 4*sizeof(float));

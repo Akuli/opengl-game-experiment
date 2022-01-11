@@ -22,7 +22,4 @@
     # Apparently there's no way to say "always ignore this include".
     # Instead, just include something that is likely included anyway, lol
     { include: ["<ext/alloc_traits.h>", "private", "<vector>", "public"] },
-
-    # needed on github actions, idk why
-    { include: ["<bits/types/struct_tm.h>", "private", "<time.h>", "public"] },
 ]
