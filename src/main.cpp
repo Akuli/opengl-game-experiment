@@ -19,7 +19,7 @@ int main(int argc, char **argv)
 	OpenglBoilerplate boilerplate = {};
 
 	Map map = {};
-	Enemy en = enemy_new();
+	Enemy en = {};
 	Camera cam = {};
 
 	int zdir = 0;
@@ -40,13 +40,12 @@ int main(int argc, char **argv)
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		map.render(cam);
-		enemy_render(&en, &cam, map);
+		en.render(cam, map);
 		SDL_GL_SwapWindow(boilerplate.window);
 
 		SDL_Event e;
 		while (SDL_PollEvent(&e)) switch(e.type) {
 			case SDL_QUIT:
-				enemy_destroy(&en);
 				return 0;
 
 			case SDL_KEYDOWN:

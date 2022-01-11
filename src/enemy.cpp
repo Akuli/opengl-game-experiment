@@ -56,22 +56,22 @@ static const std::vector<std::array<vec4, 3>>& get_vertex_data()
 	return vertexdata;
 }
 
-void enemy_render(const Enemy *en, const Camera *cam, Map& map)
+void Enemy::render(const Camera& cam, Map& map)
 {
-	glUseProgram(en->shaderprogram);
+	glUseProgram(this->shaderprogram);
 
-	vec3 v = vec3{0,map.get_height(0, 0),0} - cam->location;
+	vec3 v = vec3{0,map.get_height(0, 0),0} - cam.location;
 	glUniform3f(
-		glGetUniformLocation(en->shaderprogram, "addToLocation"),
+		glGetUniformLocation(this->shaderprogram, "addToLocation"),
 		v.x, v.y, v.z);
 	glUniformMatrix3fv(
-		glGetUniformLocation(en->shaderprogram, "world2cam"),
-		1, true, &cam->world2cam.rows[0][0]);
+		glGetUniformLocation(this->shaderprogram, "world2cam"),
+		1, true, &cam.world2cam.rows[0][0]);
 	glUniformMatrix3fv(
-		glGetUniformLocation(en->shaderprogram, "mapRotation"),
+		glGetUniformLocation(this->shaderprogram, "mapRotation"),
 		1, true, &map.get_rotation_matrix(0, 0).rows[0][0]);
 
-	glBindBuffer(GL_ARRAY_BUFFER, en->vbo);
+	glBindBuffer(GL_ARRAY_BUFFER, this->vbo);
 	glEnableVertexAttribArray(0);
 	glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 0, 0);
 	glDrawArrays(GL_TRIANGLES, 0, 3*get_vertex_data().size());
@@ -80,11 +80,9 @@ void enemy_render(const Enemy *en, const Camera *cam, Map& map)
 	glUseProgram(0);
 }
 
-Enemy enemy_new(void)
+Enemy::Enemy()
 {
-	Enemy enemy;
-
-	const char *vertex_shader =
+	std::string vertex_shader =
 		"#version 330\n"
 		"\n"
 		"layout(location = 0) in vec4 positionAndColor;\n"
@@ -102,21 +100,19 @@ Enemy enemy_new(void)
 		"    vertexToFragmentColor = darkerAtDistance(vec3(1,0,1)*mix(0.1, 0.4, 1-positionAndColor.w), pos);\n"
 		"}\n"
 		;
-	enemy.shaderprogram = OpenglBoilerplate::create_shader_program(vertex_shader);
+	this->shaderprogram = OpenglBoilerplate::create_shader_program(vertex_shader);
 
 	const std::vector<std::array<vec4, 3>>& vertexdata = get_vertex_data();
 
-	glGenBuffers(1, &enemy.vbo);
-	SDL_assert(enemy.vbo != 0);
-	glBindBuffer(GL_ARRAY_BUFFER, enemy.vbo);
+	glGenBuffers(1, &this->vbo);
+	SDL_assert(this->vbo != 0);
+	glBindBuffer(GL_ARRAY_BUFFER, this->vbo);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(vertexdata[0])*vertexdata.size(), vertexdata.data(), GL_DYNAMIC_DRAW);
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
-
-	return enemy;
 }
 
-void enemy_destroy(const Enemy *en)
+Enemy::~Enemy()
 {
-	glDeleteProgram(en->shaderprogram);
-	glDeleteBuffers(1, &en->vbo);
+	glDeleteProgram(this->shaderprogram);
+	glDeleteBuffers(1, &this->vbo);
 }
