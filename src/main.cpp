@@ -29,11 +29,11 @@ int main(int argc, char **argv)
 	while (1) {
 		// FIXME: turn amount should depend on fps
 		angle += 0.03f*angledir;
-		cam.cam2world = mat3_rotation_xz(angle);
-		cam.world2cam = mat3_rotation_xz(-angle);
+		cam.cam2world = mat3::rotation_about_y(angle);
+		cam.world2cam = mat3::rotation_about_y(-angle);
 
 		// FIXME: move amount should depend on fps
-		vec3_add_inplace(&cam.location, mat3_mul_vec3(cam.cam2world, vec3{0,0,0.3f*zdir}));
+		cam.location += cam.cam2world * vec3{0,0,0.3f*zdir};
 		cam.location.y = map_getheight(map, cam.location.x, cam.location.z) + 5;
 
 		glClearColor(0, 0, 0, 0);

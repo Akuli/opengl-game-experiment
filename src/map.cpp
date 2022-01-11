@@ -327,9 +327,9 @@ static void ensure_y_table_is_ready(struct Map *map, struct Section *sect)
 				vec3{sx + ix  , sect->y_table[ix  ][iz+1], sz + iz+1},
 			};
 			sect->vertexdata[i++] = std::array<vec3, 3>{
-				sx + ix+1, sect->y_table[ix+1][iz+1], sz + iz+1,
-				sx + ix+1, sect->y_table[ix+1][iz  ], sz + iz  ,
-				sx + ix  , sect->y_table[ix  ][iz+1], sz + iz+1,
+				vec3{sx + ix+1, sect->y_table[ix+1][iz+1], sz + iz+1},
+				vec3{sx + ix+1, sect->y_table[ix+1][iz  ], sz + iz  },
+				vec3{sx + ix  , sect->y_table[ix  ][iz+1], sz + iz+1},
 			};
 		}
 	}
@@ -377,17 +377,17 @@ mat3 map_get_rotation(struct Map *map, float x, float z)
 
 	// Ensure that v and w are perpendicular and length 1
 	// https://en.wikipedia.org/wiki/Gram%E2%80%93Schmidt_process
-	vec3_mul_float_inplace(&v, 1/sqrtf(vec3_dot(v,v)));
-	vec3_sub_inplace(&w, vec3_mul_float(v, vec3_dot(v,w)));
-	vec3_mul_float_inplace(&w, 1/sqrtf(vec3_dot(w,w)));
+	v /= sqrtf(v.dot(v));
+	w -= v*v.dot(w);
+	w /= sqrtf(w.dot(w));
 
-	vec3 cross = vec3_cross(w, v);
+	vec3 cross = w.cross(v);
 	mat3 res = {
 		v.x, cross.x, w.x,
 		v.y, cross.y, w.y,
 		v.z, cross.z, w.z,
 	};
-	SDL_assert(fabsf(mat3_det(res) - 1) < 0.01f);
+	SDL_assert(fabsf(res.det() - 1) < 0.01f);
 	return res;
 }
 

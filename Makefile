@@ -1,4 +1,5 @@
-CXXFLAGS += -Wall -Wextra -Wpedantic -std=c++17
+# compile_flags.txt needed for clangd to know the c standard to use
+CXXFLAGS += -Wall -Wextra -Wpedantic $(shell cat compile_flags.txt)
 CXXFLAGS += -Wfloat-conversion -Wno-sign-compare
 CXXFLAGS += -Wno-missing-field-initializers
 CXXFLAGS += -Werror=stack-usage=60000

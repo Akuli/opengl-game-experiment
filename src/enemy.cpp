@@ -27,10 +27,10 @@ static const std::vector<std::array<vec4, 3>>& get_vertex_data()
 		for (int tstep = 0; tstep < tsteps; tstep++) {
 			for (int ustep = 0; ustep < usteps; ustep++) {
 				// Min value of t tweaked so that the tip of enemy looks good
-				float t1 = lerp(0, 2*pi, tstep/(float)tsteps);
-				float t2 = lerp(0, 2*pi, (tstep+1)/(float)tsteps);
-				float u1 = lerp(0, 1, ustep/(float)usteps);
-				float u2 = lerp(0, 1, (ustep+1)/(float)usteps);
+				float t1 = lerp<float>(0, 2*pi, tstep/(float)tsteps);
+				float t2 = lerp<float>(0, 2*pi, (tstep+1)/(float)tsteps);
+				float u1 = lerp<float>(0, 1, ustep/(float)usteps);
+				float u2 = lerp<float>(0, 1, (ustep+1)/(float)usteps);
 
 				vec4 a = point_on_surface(t1, u1);
 				vec4 b = point_on_surface(t1, u2);
@@ -43,9 +43,13 @@ static const std::vector<std::array<vec4, 3>>& get_vertex_data()
 		}
 
 		// Scale it up. No idea why won't work without indexes...
-		for (int i = 0; i < vertexdata.size(); i++)
-			for (int k = 0; k < vertexdata[i].size(); k++)
-				vec4_mul_float_first3_inplace(&vertexdata[i][k], 2);
+		for (int i = 0; i < vertexdata.size(); i++) {
+			for (int k = 0; k < vertexdata[i].size(); k++) {
+				vertexdata[i][k].x *= 2;
+				vertexdata[i][k].y *= 2;
+				vertexdata[i][k].z *= 2;
+			}
+		}
 	}
 
 	return vertexdata;
@@ -55,7 +59,7 @@ void enemy_render(const struct Enemy *en, const struct Camera *cam, struct Map *
 {
 	glUseProgram(en->shaderprogram);
 
-	vec3 v = vec3_sub(vec3{0,map_getheight(map, 0, 0),0}, cam->location);
+	vec3 v = vec3{0,map_getheight(map, 0, 0),0} - cam->location;
 	glUniform3f(
 		glGetUniformLocation(en->shaderprogram, "addToLocation"),
 		v.x, v.y, v.z);
@@ -64,7 +68,7 @@ void enemy_render(const struct Enemy *en, const struct Camera *cam, struct Map *
 		1, true, &cam->world2cam.rows[0][0]);
 	glUniformMatrix3fv(
 		glGetUniformLocation(en->shaderprogram, "mapRotation"),
-		1, true, (float*)map_get_rotation(map, 0, 0).rows);
+		1, true, &map_get_rotation(map, 0, 0).rows[0][0]);
 
 	glBindBuffer(GL_ARRAY_BUFFER, en->vbo);
 	glEnableVertexAttribArray(0);
