@@ -20,8 +20,8 @@ public:
 	float get_height(float x, float z);
 	void render(const Camera& camera);
 
-	// If the floor has constant height, returns identity matrix.
-	// In general, returns a rotation that maps (0,1,0) to be perpendicular to the map.
+	// Returns identity matrix, if floor is flat (get_height() returns a constant).
+	// In general, returns a matrix that tilts in floor direction, mapping (0,1,0) to a normal vector.
 	mat3 get_rotation_matrix(float x, float z);
 
 private:

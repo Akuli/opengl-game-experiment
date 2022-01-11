@@ -10,6 +10,7 @@
 #include <utility>
 #include <vector>
 #include "camera.hpp"
+#include "linalg.hpp"
 #include "log.hpp"
 #include "opengl_boilerplate.hpp"
 
@@ -278,21 +279,17 @@ mat3 Map::get_rotation_matrix(float x, float z)
 	float h = 0.01f;
 	vec3 v = { 2*h, this->get_height(x+h,z) - this->get_height(x-h,z), 0 };
 	vec3 w = { 0, this->get_height(x,z+h) - this->get_height(x,z-h), 2*h };
+	vec3 normal = w.cross(v);
 
-	// Ensure that v and w are perpendicular and length 1
-	// https://en.wikipedia.org/wiki/Gram%E2%80%93Schmidt_process
-	v /= std::sqrt(v.dot(v));
-	w -= v*v.dot(w);
-	w /= std::sqrt(w.dot(w));
+	/*
+	Tilt away from y axis in the correct direction.
+	atan2 avoids problems with division by zero, when normal vector goes up.
+	Slightly slower than needs to be, because this can be done without trig funcs, but it works
+	*/
+	float angle_about_y = std::atan2(normal.z, normal.x);
+	float tilt_angle = std::acos(normal.y / sqrtf(normal.dot(normal)));
 
-	vec3 cross = w.cross(v);
-	mat3 res = {
-		v.x, cross.x, w.x,
-		v.y, cross.y, w.y,
-		v.z, cross.z, w.z,
-	};
-	SDL_assert(std::abs(res.det() - 1) < 0.01f);
-	return res;
+	return mat3::rotation_about_y(angle_about_y) * mat3::rotation_about_z(-tilt_angle) * mat3::rotation_about_y(-angle_about_y);
 }
 
 void Map::render(const Camera& cam)

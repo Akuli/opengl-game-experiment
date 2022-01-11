@@ -68,8 +68,8 @@ public:
 	inline vec2 operator*(vec2 v) const
 	{
 		return vec2{
-			v.dot(vec2(this->rows[0])),
-			v.dot(vec2(this->rows[1])),
+			vec2(this->rows[0]).dot(v),
+			vec2(this->rows[1]).dot(v),
 		};
 	}
 
@@ -83,14 +83,27 @@ public:
 	inline vec3 operator*(vec3 v) const
 	{
 		return vec3{
-			v.dot(vec3(this->rows[0])),
-			v.dot(vec3(this->rows[1])),
-			v.dot(vec3(this->rows[2])),
+			vec3(this->rows[0]).dot(v),
+			vec3(this->rows[1]).dot(v),
+			vec3(this->rows[2]).dot(v),
+		};
+	}
+
+	inline mat3 operator*(mat3 m) const
+	{
+		return mat3{
+			vec3(this->rows[0]).dot(m.column(0)), vec3(this->rows[0]).dot(m.column(1)), vec3(this->rows[0]).dot(m.column(2)),
+			vec3(this->rows[1]).dot(m.column(0)), vec3(this->rows[1]).dot(m.column(1)), vec3(this->rows[1]).dot(m.column(2)),
+			vec3(this->rows[2]).dot(m.column(0)), vec3(this->rows[2]).dot(m.column(1)), vec3(this->rows[2]).dot(m.column(2)),
 		};
 	}
 
 	static mat3 rotation_about_y(float angle);
+	static mat3 rotation_about_z(float angle);
 	float det() const;
+
+private:
+	inline vec3 column(int i) const { return vec3{this->rows[0][i], this->rows[1][i], this->rows[2][i]}; }
 };
 
 // should be safe to pass vector objects to opengl

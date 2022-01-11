@@ -31,6 +31,16 @@ mat3 mat3::rotation_about_y(float angle)
 	};
 }
 
+mat3 mat3::rotation_about_z(float angle)
+{
+	using std::sin, std::cos;
+	return mat3{
+		cos(angle), -sin(angle), 0,
+		sin(angle), cos(angle),  0,
+		0,          0,           1,
+	};
+}
+
 static void transpose(mat3& M)
 {
 	std::swap(M.rows[1][0], M.rows[0][1]);
