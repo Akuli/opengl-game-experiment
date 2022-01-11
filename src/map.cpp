@@ -18,8 +18,6 @@ static constexpr int TRIANGLES_PER_SECTION = 2*SECTION_SIZE*SECTION_SIZE;
 
 struct GaussianCurveMountain {
 	float xzscale, yscale, centerx, centerz;
-	GaussianCurveMountain() = default;
-	GaussianCurveMountain(float xzscale, float yscale, float centerx, float centerz) : xzscale(xzscale),yscale(yscale),centerx(centerx),centerz(centerz) {}
 };
 
 struct Section {
@@ -65,7 +63,7 @@ static void generate_section(Section& section)
 	for (i = 0; i < section.mountains.size()/20; i++) {
 		float h = 5*std::tan(uniform_random_float(-1.4f, 1.4f));
 		float w = uniform_random_float(std::abs(h), 3*std::abs(h));
-		section.mountains[i] = GaussianCurveMountain(w, h, uniform_random_float(0, SECTION_SIZE), uniform_random_float(0, SECTION_SIZE));
+		section.mountains[i] = GaussianCurveMountain{w, h, uniform_random_float(0, SECTION_SIZE), uniform_random_float(0, SECTION_SIZE)};
 	}
 
 	// narrow and shallow
@@ -74,7 +72,7 @@ static void generate_section(Section& section)
 		float w = uniform_random_float(2*h, 5*h);
 		if (rand() % 2)
 			h = -h;
-		section.mountains[i] = GaussianCurveMountain(w, h, uniform_random_float(0, SECTION_SIZE), uniform_random_float(0, SECTION_SIZE));
+		section.mountains[i] = GaussianCurveMountain{w, h, uniform_random_float(0, SECTION_SIZE), uniform_random_float(0, SECTION_SIZE)};
 	}
 
 	// y=e^(-x^2) seems to be pretty much zero for |x| >= 3.
