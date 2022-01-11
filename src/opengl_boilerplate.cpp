@@ -7,6 +7,8 @@
 // use glDeleteShader afterwards
 static GLuint create_shader(GLenum type, const std::string& source, const char *shadername)
 {
+	static constexpr float aspect_ratio = CAMERA_SCREEN_WIDTH / (float)CAMERA_SCREEN_HEIGHT;
+
 	std::string marker = "BOILERPLATE_GOES_HERE";
 	std::string boilerplate =
 		"vec4 darkerAtDistance(in vec3 brightColor, in vec3 locationFromCamera)\n"
@@ -17,9 +19,11 @@ static GLuint create_shader(GLenum type, const std::string& source, const char *
 		"\n"
 		"vec4 locationFromCameraToGlPosition(in vec3 locationFromCamera)\n"
 		"{\n"
-		"    // Other components of (x,y,z,w) will be implicitly divided by w.\n"
-		"    // Resulting z will be used in z-buffer.\n"
-		"    return vec4(locationFromCamera.x, locationFromCamera.y, 1, -locationFromCamera.z);\n"
+		"    /*\n"
+		"    Other components of (x,y,z,w) will be implicitly divided by w.\n"
+		"    Resulting z will be used in the z-buffer.\n"
+		"    */\n"
+		"    return vec4(locationFromCamera.x/" + std::to_string(aspect_ratio) + ", locationFromCamera.y, 1, -locationFromCamera.z);\n"
 		"}\n"
 		;
 
