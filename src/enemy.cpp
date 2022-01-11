@@ -13,7 +13,8 @@
 
 static vec4 point_on_surface(float t, float u)
 {
-	return vec4{ u*cosf(t), 2*(1 - u*u) + u*u*u*0.2f*(1+sinf(10*t)), u*sinf(t), u };
+	using std::cos, std::sin;
+	return vec4{ u*cos(t), 2*(1 - u*u) + u*u*u*0.2f*(1+sin(10*t)), u*sin(t), u };
 }
 
 static const std::vector<std::array<vec4, 3>>& get_vertex_data()
@@ -22,7 +23,7 @@ static const std::vector<std::array<vec4, 3>>& get_vertex_data()
 	static std::vector<std::array<vec4, 3>> vertexdata;
 
 	if (vertexdata.empty()) {
-		float pi = acosf(-1);
+		float pi = std::acos(-1.0f);
 
 		for (int tstep = 0; tstep < tsteps; tstep++) {
 			for (int ustep = 0; ustep < usteps; ustep++) {

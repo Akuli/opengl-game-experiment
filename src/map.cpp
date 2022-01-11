@@ -62,8 +62,8 @@ static void generate_section(struct Section *sect)
 
 	// wide and deep/tall
 	for (i = 0; i < sect->mountains.size()/20; i++) {
-		float h = 5*tanf(uniform_random_float(-1.4f, 1.4f));
-		float w = uniform_random_float(fabsf(h), 3*fabsf(h));
+		float h = 5*std::tan(uniform_random_float(-1.4f, 1.4f));
+		float w = uniform_random_float(std::abs(h), 3*std::abs(h));
 		sect->mountains[i] = GaussianCurveMountain(w, h, uniform_random_float(0, SECTION_SIZE), uniform_random_float(0, SECTION_SIZE));
 	}
 
@@ -377,9 +377,9 @@ mat3 map_get_rotation(struct Map *map, float x, float z)
 
 	// Ensure that v and w are perpendicular and length 1
 	// https://en.wikipedia.org/wiki/Gram%E2%80%93Schmidt_process
-	v /= sqrtf(v.dot(v));
+	v /= std::sqrt(v.dot(v));
 	w -= v*v.dot(w);
-	w /= sqrtf(w.dot(w));
+	w /= std::sqrt(w.dot(w));
 
 	vec3 cross = w.cross(v);
 	mat3 res = {
@@ -387,7 +387,7 @@ mat3 map_get_rotation(struct Map *map, float x, float z)
 		v.y, cross.y, w.y,
 		v.z, cross.z, w.z,
 	};
-	SDL_assert(fabsf(res.det() - 1) < 0.01f);
+	SDL_assert(std::abs(res.det() - 1) < 0.01f);
 	return res;
 }
 
