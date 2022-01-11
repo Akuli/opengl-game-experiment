@@ -7,7 +7,7 @@ My previous games do the 3D drawing on the CPU with pixel-by-pixel for loops.
 
 Running the game:
 
-	$ sudo apt install git gcc make libsdl2-dev libglew-dev
+	$ sudo apt install git g++ make libsdl2-dev libglew-dev
 	$ git clone https://github.com/Akuli/opengl-game-experiment
 	$ cd opengl-game-experiment
 	$ make -j2
