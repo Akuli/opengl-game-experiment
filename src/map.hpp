@@ -7,7 +7,7 @@
 #include <memory>
 
 // not gonna shit all over my h++ file with private structs and methods, sorry
-struct MapPrivate;
+struct MapPrivate;  // IWYU pragma: keep
 
 class Map {
 public:
