@@ -27,7 +27,6 @@ static const std::vector<std::array<vec4, 3>>& get_vertex_data()
 
 		for (int tstep = 0; tstep < tsteps; tstep++) {
 			for (int ustep = 0; ustep < usteps; ustep++) {
-				// Min value of t tweaked so that the tip of enemy looks good
 				float t1 = lerp<float>(0, 2*pi, tstep/(float)tsteps);
 				float t2 = lerp<float>(0, 2*pi, (tstep+1)/(float)tsteps);
 				float u1 = lerp<float>(0, 1, ustep/(float)usteps);
