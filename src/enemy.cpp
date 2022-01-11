@@ -42,12 +42,12 @@ static const std::vector<std::array<vec4, 3>>& get_vertex_data()
 			}
 		}
 
-		// Scale it up. No idea why won't work without indexes...
-		for (int i = 0; i < vertexdata.size(); i++) {
-			for (int k = 0; k < vertexdata[i].size(); k++) {
-				vertexdata[i][k].x *= 2;
-				vertexdata[i][k].y *= 2;
-				vertexdata[i][k].z *= 2;
+		// Scale it up
+		for (std::array<vec4, 3>& triangle : vertexdata) {
+			for (vec4& corner : triangle) {
+				corner.x *= 2;
+				corner.y *= 2;
+				corner.z *= 2;
 			}
 		}
 	}
