@@ -56,7 +56,7 @@ static const std::vector<std::array<vec4, 3>>& get_vertex_data()
 	return vertexdata;
 }
 
-void Enemy::render(const Camera& cam, Map& map)
+void Enemy::render(const Camera& cam, Map& map) const
 {
 	glUseProgram(this->shaderprogram);
 

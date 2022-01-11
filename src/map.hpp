@@ -15,6 +15,8 @@ public:
 	~Map();
 	Map(const Map&) = delete;
 
+	// Methods not marked const, because map may be expanded automatically when they are called
+
 	float get_height(float x, float z);
 	void render(const Camera& camera);
 

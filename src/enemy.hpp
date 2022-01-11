@@ -11,7 +11,7 @@ public:
 	~Enemy();
 	Enemy(const Enemy&) = delete;
 
-	void render(const Camera& camera, Map& map);
+	void render(const Camera& camera, Map& map) const;
 
 private:
 	GLuint shaderprogram;

@@ -3,8 +3,6 @@
 
 #include <SDL2/SDL.h>      // IWYU pragma: keep
 
-void log_init(void);
-
 // https://stackoverflow.com/a/5459929
 #define LOG_STR_HELPER(x) #x
 #define LOG_STR(x) LOG_STR_HELPER(x)
