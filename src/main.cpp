@@ -14,7 +14,7 @@ int main(int argc, char **argv)
     (void)argc;
     (void)argv;
 
-	std::srand(std::time(NULL));
+	std::srand(std::time(nullptr));
 
 	OpenglBoilerplate boilerplate = {};
 

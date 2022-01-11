@@ -35,7 +35,7 @@ static GLuint create_shader(GLenum type, const std::string& source, const char *
 
 	GLuint shader = glCreateShader(type);
 	const char *tmp = actual_source.c_str();
-	glShaderSource(shader, 1, &tmp, NULL);
+	glShaderSource(shader, 1, &tmp, nullptr);
 	glCompileShader(shader);
 
 	GLint status;

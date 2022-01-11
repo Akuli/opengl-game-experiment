@@ -339,7 +339,7 @@ void Map::render(const Camera& cam)
 		glGenBuffers(1, &this->priv->vbo);
 		SDL_assert(this->priv->vbo != 0);
 		glBindBuffer(GL_ARRAY_BUFFER, this->priv->vbo);
-		glBufferData(GL_ARRAY_BUFFER, maxsections*sizeof(((Section*)NULL)->vertexdata), NULL, GL_DYNAMIC_DRAW);
+		glBufferData(GL_ARRAY_BUFFER, maxsections*sizeof(((Section*)nullptr)->vertexdata), nullptr, GL_DYNAMIC_DRAW);
 		glBindBuffer(GL_ARRAY_BUFFER, 0);
 	}
 
@@ -403,6 +403,6 @@ Map::~Map()
 {
 	// TODO: delete some of the opengl stuff?
 	this->priv->queue.quit = true;
-	SDL_WaitThread(this->priv->prepthread, NULL);
+	SDL_WaitThread(this->priv->prepthread, nullptr);
 	SDL_DestroyMutex(this->priv->queue.lock);
 }
