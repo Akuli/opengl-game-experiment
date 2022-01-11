@@ -9,7 +9,8 @@
 // use glDeleteShader afterwards
 static GLuint create_shader(GLenum type, const std::string& source, const char *shadername)
 {
-	const char *boilerplate =
+	std::string marker = "BOILERPLATE_GOES_HERE";
+	std::string boilerplate =
 		"vec4 darkerAtDistance(in vec3 brightColor, in vec3 locationFromCamera)\n"
 		"{\n"
 		"    vec3 rgb = brightColor * exp(-0.0003*pow(30+length(locationFromCamera),2));\n"
@@ -24,7 +25,6 @@ static GLuint create_shader(GLenum type, const std::string& source, const char *
 		"}\n"
 		;
 
-	std::string marker = "BOILERPLATE_GOES_HERE";
 	std::string::size_type boilerplateloc = source.find(marker);
 	std::string actual_source;
 	if (boilerplateloc == std::string::npos) {
