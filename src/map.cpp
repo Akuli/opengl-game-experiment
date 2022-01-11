@@ -7,6 +7,7 @@
 #include <math.h>
 #include <array>
 #include <random>
+#include <unordered_map>
 #include "camera.hpp"
 #include "log.hpp"
 #include "opengl_boilerplate.hpp"
@@ -114,7 +115,7 @@ background. After generating, a section can be added anywhere on the map.
 */
 struct SectionQueue {
 	// TODO: sects should be a vector
-	struct Section sects[30];  // should have about 4x the room it typically needs, because corner cases
+	struct Section* sects[30];  // should have about 4x the room it typically needs, because corner cases
 	int len;
 	SDL_mutex *lock;  // hold this while adding/removing/checking sects or len
 	bool quit;
@@ -124,9 +125,6 @@ static int section_preparing_thread(void *queueptr)
 {
 	SDL_SetThreadPriority(SDL_THREAD_PRIORITY_LOW);
 	SectionQueue *queue = (SectionQueue *)queueptr;
-
-	Section *tmp = (Section*)malloc(sizeof(*tmp));
-	SDL_assert(tmp);
 
 	while (!queue->quit) {
 		int ret = SDL_LockMutex(queue->lock);
@@ -142,24 +140,33 @@ static int section_preparing_thread(void *queueptr)
 		}
 
 		log_printf("There is room in section queue (%d/%d), generating a new section", len, maxlen);
+		Section *tmp = new Section;
 		generate_section(tmp);  // slow
 
 		ret = SDL_LockMutex(queue->lock);
 		SDL_assert(ret == 0);
-		queue->sects[queue->len++] = *tmp;
+		queue->sects[queue->len++] = tmp;
 		ret = SDL_UnlockMutex(queue->lock);
 		SDL_assert(ret == 0);
 	}
 
-	free(tmp);
 	return 1234;  // ignored
 }
 
+// pairs aren't hashable :(
+// https://stackoverflow.com/a/32685618
+struct IntPairHasher {
+	size_t operator() (const std::pair<int,int> &pair) const {
+		size_t h1 = std::hash<int>{}(pair.first);
+		size_t h2 = std::hash<int>{}(pair.second);
+		// both magic numbers are primes, to prevent patterns that place many numbers similarly
+		return (h1*7907u) ^ (h2*4391u);
+	}
+};
+
 struct Map {
-	struct Section *sections;
-	int nsections;
-	int *itable;  // Hash table of indexes into sections array
-	unsigned sectsalloced;  // space allocated in itable and sections
+	// TODO: why does unique_ptr not work here?
+	std::unordered_map<std::pair<int, int>, Section*, IntPairHasher> sections;
 
 	struct SectionQueue queue;
 	SDL_Thread *prepthread;
@@ -168,95 +175,11 @@ struct Map {
 	GLuint vbo;  // Vertex Buffer Object, represents triangles going to gpu
 };
 
-static unsigned section_hash(int startx, int startz)
+static Section *find_or_add_section(Map *map, int startx, int startz)
 {
-	unsigned x = (unsigned)(startx / SECTION_SIZE);
-	unsigned z = (unsigned)(startz / SECTION_SIZE);
+	std::pair<int, int> key = { startx, startz };
 
-	// both magic numbers are primes, to prevent patterns that place many numbers similarly
-	return (x*7907u) ^ (z*4391u);
-}
-
-// For checking whether hash function is working well
-#if 0
-static void print_collision_percentage(const struct Map *map)
-{
-	int colls = 0, taken = 0;
-	for (unsigned h = 0; h < map->sectsalloced; h++) {
-		if (map->itable[h] == -1)
-			continue;
-		taken++;
-		if (section_hash(map->sections[map->itable[h]].startx, map->sections[map->itable[h]].startz) % map->sectsalloced != h)
-			colls++;
-	}
-	if (taken != 0)
-		log_printf("itable: %d%% full, %d%% of filled slots are collisions",
-			taken*100/map->sectsalloced, colls*100/taken);
-}
-#endif
-
-static struct Section *find_section(const struct Map *map, int startx, int startz)
-{
-	SDL_assert(startx % SECTION_SIZE == 0);
-	SDL_assert(startz % SECTION_SIZE == 0);
-
-	if (map->sectsalloced == 0)
-		return NULL;
-
-	unsigned h = section_hash(startx, startz) % map->sectsalloced;
-	while (map->itable[h] != -1) {
-		struct Section *sec = &map->sections[map->itable[h]];
-		if (sec->startx == startx && sec->startz == startz)
-			return sec;
-		h = (h+1) % map->sectsalloced;
-	}
-	return NULL;
-}
-
-static void add_section_to_itable(struct Map *map, int sectidx)
-{
-	int startx = map->sections[sectidx].startx;
-	int startz = map->sections[sectidx].startz;
-
-	unsigned h = section_hash(startx, startz) % map->sectsalloced;
-	while (map->itable[h] != -1)
-		h = (h+1) % map->sectsalloced;
-	map->itable[h] = sectidx;
-}
-
-static void make_room_for_more_sections(struct Map *map, unsigned howmanymore)
-{
-	// +1 to ensure there's empty slot in itable, so "while (itable[h] != -1)" loops will terminate
-	unsigned goal = map->nsections + howmanymore + 1;
-
-	// allocate more than necessary, to prevent collisions in hash table
-	goal = (unsigned)(1.4f * goal);  // TODO: choose a good magic number?
-
-	unsigned oldalloc = map->sectsalloced;
-	if (map->sectsalloced == 0)
-		map->sectsalloced = 1;
-	while (map->sectsalloced < goal)
-		map->sectsalloced *= 2;
-	if (map->sectsalloced == oldalloc)
-		return;
-	log_printf("growing section arrays: %u --> %u", oldalloc, map->sectsalloced);
-
-	map->itable = (int*)realloc(map->itable, sizeof(map->itable[0])*map->sectsalloced);
-	map->sections = (Section*)realloc(map->sections, sizeof(map->sections[0])*map->sectsalloced);
-	SDL_assert(map->itable && map->sections);
-
-	for (int h = 0; h < map->sectsalloced; h++)
-		map->itable[h] = -1;
-	for (int i = 0; i < map->nsections; i++)
-		add_section_to_itable(map, i);
-}
-
-static struct Section *find_or_add_section(struct Map *map, int startx, int startz)
-{
-	struct Section *res = find_section(map, startx, startz);
-	if (!res) {
-		res = &map->sections[map->nsections];
-
+	if (map->sections.find(std::make_pair(startx, startz)) == map->sections.end()) {
 		// Wait until there is an item in the queue
 		while(1) {
 			int ret = SDL_LockMutex(map->queue.lock);
@@ -264,7 +187,7 @@ static struct Section *find_or_add_section(struct Map *map, int startx, int star
 
 			bool empty = (map->queue.len == 0);
 			if (!empty)
-				*res = map->queue.sects[--map->queue.len];
+				map->sections[key] = map->queue.sects[--map->queue.len];
 
 			ret = SDL_UnlockMutex(map->queue.lock);
 			SDL_assert(ret == 0);
@@ -275,13 +198,12 @@ static struct Section *find_or_add_section(struct Map *map, int startx, int star
 				break;
 		}
 
-		res->startx = startx;
-		res->startz = startz;
-		add_section_to_itable(map, map->nsections);
-		map->nsections++;
-		log_printf("added a section, map now has %d sections", map->nsections);
+		map->sections[key]->startx = startx;
+		map->sections[key]->startz = startz;
+		log_printf("added a section, map now has %d sections", (int)map->sections.size());
 	}
-	return res;
+
+	return map->sections[key];
 }
 
 static void ensure_y_table_is_ready(struct Map *map, struct Section *sect)
@@ -346,10 +268,6 @@ static int get_section_start_coordinate(float val)
 
 float map_getheight(struct Map *map, float x, float z)
 {
-	// Allocate many sections beforehand, doing it later can mess up pointers into sections array
-	// One section is not enough, need to include its 8 neighbors too
-	make_room_for_more_sections(map, 9);
-
 	struct Section *sect = find_or_add_section(map, get_section_start_coordinate(x), get_section_start_coordinate(z));
 	ensure_y_table_is_ready(map, sect);
 
@@ -417,9 +335,6 @@ void map_render(struct Map *map, const struct Camera *cam)
 	int maxsections = ((2*r)/SECTION_SIZE + 2)*((2*r)/SECTION_SIZE + 2);
 	SDL_assert(nsections <= maxsections);
 
-	// need +2 because one extra section in each direction
-	make_room_for_more_sections(map, (nx+2)*(nz+2));
-
 	if (map->vbo == 0) {
 		glGenBuffers(1, &map->vbo);
 		SDL_assert(map->vbo != 0);
@@ -451,8 +366,7 @@ void map_render(struct Map *map, const struct Camera *cam)
 
 struct Map *map_new(void)
 {
-	Map *map = (Map*)calloc(1, sizeof(*map));
-	SDL_assert(map);
+	Map *map = new Map;
 	*map = Map{};
 
 	map->queue.lock = SDL_CreateMutex();
@@ -494,7 +408,5 @@ void map_destroy(struct Map *map)
 {
 	map->queue.quit = true;
 	SDL_WaitThread(map->prepthread, NULL);
-	free(map->itable);
-	free(map->sections);
-	free(map);
+	delete map;
 }
