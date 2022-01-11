@@ -6,15 +6,13 @@
 #include <stdbool.h>
 #include <math.h>
 #include <array>
+#include <algorithm>
 #include <random>
 #include <unordered_map>
 #include <memory>
 #include "camera.hpp"
 #include "log.hpp"
 #include "opengl_boilerplate.hpp"
-
-#define min(x, y) ((x)<(y) ? (x) : (y))
-#define min4(a,b,c,d) min(min(a,b),min(c,d))
 
 #define SECTION_SIZE 40  // side length of section square on xz plane
 #define TRIANGLES_PER_SECTION (2*SECTION_SIZE*SECTION_SIZE)
@@ -83,12 +81,13 @@ static void generate_section(struct Section& section)
 	int xzmin = -SECTION_SIZE, xzmax = 2*SECTION_SIZE;
 
 	for (i = 0; i < section.mountains.size(); i++) {
-		float mindist = min4(
+		float mindist = std::min({
 			section.mountains[i].centerx - xzmin,
 			section.mountains[i].centerz - xzmin,
 			xzmax - section.mountains[i].centerx,
-			xzmax - section.mountains[i].centerz);
-		section.mountains[i].xzscale = min(section.mountains[i].xzscale, mindist/3);
+			xzmax - section.mountains[i].centerz,
+		});
+		section.mountains[i].xzscale = std::min(section.mountains[i].xzscale, mindist/3);
 	}
 
 	// This loop is too slow to run within a single frame
