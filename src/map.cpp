@@ -23,8 +23,6 @@ struct GaussianCurveMountain {
 };
 
 struct Section {
-	int startx, startz;
-
 	/*
 	y = yscale*e^(-(((x - centerx) / xzscale)^2 + ((z - centerz) / xzscale)^2))
 	yscale can be negative, xzscale can't
@@ -47,6 +45,9 @@ struct Section {
 	std::array<std::array<float, SECTION_SIZE + 1>, SECTION_SIZE + 1> y_table;
 	std::array<std::array<vec3, 3>, TRIANGLES_PER_SECTION> vertexdata;
 	bool y_table_and_vertexdata_ready;
+
+	Section() = default;
+	Section(const Section&) = delete;
 };
 
 static float uniform_random_float(float min, float max)
@@ -197,42 +198,30 @@ static Section *find_or_add_section(MapPrivate& map, int startx, int startz)
 				break;
 		}
 
-		map.sections[key]->startx = startx;
-		map.sections[key]->startz = startz;
 		log_printf("added a section, map now has %d sections", (int)map.sections.size());
 	}
 
 	return &*map.sections[key];
 }
 
-static void ensure_y_table_is_ready(MapPrivate& map, Section *section)
+static void ensure_y_table_is_ready(MapPrivate& map, int startx, int startz)
 {
+	SDL_assert(map.sections.find(std::make_pair(startx, startz)) != map.sections.end());
+	Section *section = map.sections[std::make_pair(startx, startz)].get();
 	if (section->y_table_and_vertexdata_ready)
 		return;
-
-	Section *sections[9] = {
-		find_or_add_section(map, section->startx - SECTION_SIZE, section->startz - SECTION_SIZE),
-		find_or_add_section(map, section->startx - SECTION_SIZE, section->startz),
-		find_or_add_section(map, section->startx - SECTION_SIZE, section->startz + SECTION_SIZE),
-		find_or_add_section(map, section->startx, section->startz - SECTION_SIZE),
-		section,
-		find_or_add_section(map, section->startx, section->startz + SECTION_SIZE),
-		find_or_add_section(map, section->startx + SECTION_SIZE, section->startz - SECTION_SIZE),
-		find_or_add_section(map, section->startx + SECTION_SIZE, section->startz),
-		find_or_add_section(map, section->startx + SECTION_SIZE, section->startz + SECTION_SIZE),
-	};
 
 	for (int xidx = 0; xidx <= SECTION_SIZE; xidx++) {
 		for (int zidx = 0; zidx <= SECTION_SIZE; zidx++) {
 			float y = 0;
-			for (Section **s = sections; s < sections+9; s++) {
-				int xdiff = section->startx - (*s)->startx;
-				int zdiff = section->startz - (*s)->startz;
-				int ix = xidx + SECTION_SIZE + xdiff;
-				int iz = zidx + SECTION_SIZE + zdiff;
-				y += (*s)->raw_y_table[ix][iz];
+			for (int xdiff = -SECTION_SIZE; xdiff <= SECTION_SIZE; xdiff += SECTION_SIZE) {
+				for (int zdiff = -SECTION_SIZE; zdiff <= SECTION_SIZE; zdiff += SECTION_SIZE) {
+					Section *s = find_or_add_section(map, startx + xdiff, startz + zdiff);
+					int ix = xidx + SECTION_SIZE - xdiff;
+					int iz = zidx + SECTION_SIZE - zdiff;
+					y += s->raw_y_table[ix][iz];
+				}
 			}
-
 			section->y_table[xidx][zidx] = y;
 		}
 	}
@@ -240,8 +229,7 @@ static void ensure_y_table_is_ready(MapPrivate& map, Section *section)
 	int i = 0;
 	for (int ix = 0; ix < SECTION_SIZE; ix++) {
 		for (int iz = 0; iz < SECTION_SIZE; iz++) {
-			float sx = section->startx, sz = section->startz;  // c++ sucks ass
-
+			float sx = startx, sz = startz;  // c++ sucks ass
 			section->vertexdata[i++] = std::array<vec3, 3>{
 				vec3{sx + ix  , section->y_table[ix  ][iz  ], sz + iz  },
 				vec3{sx + ix+1, section->y_table[ix+1][iz  ], sz + iz  },
@@ -262,18 +250,19 @@ static void ensure_y_table_is_ready(MapPrivate& map, Section *section)
 // round down to multiple of SECTION_SIZE
 static int get_section_start_coordinate(float val)
 {
-	return (int)floorf(val / SECTION_SIZE) * SECTION_SIZE;
+	return (int)std::floor(val / SECTION_SIZE) * SECTION_SIZE;
 }
 
 float Map::get_height(float x, float z)
 {
-	Section *section = find_or_add_section(*this->priv, get_section_start_coordinate(x), get_section_start_coordinate(z));
-	ensure_y_table_is_ready(*this->priv, section);
+	int startx = get_section_start_coordinate(x), startz = get_section_start_coordinate(z);
+	Section *section = find_or_add_section(*this->priv, startx, startz);
+	ensure_y_table_is_ready(*this->priv, startx, startz);
 
-	float ixfloat = x - section->startx;
-	float izfloat = z - section->startz;
-	int ix = (int)floorf(ixfloat);
-	int iz = (int)floorf(izfloat);
+	float ixfloat = x - startx;
+	float izfloat = z - startz;
+	int ix = (int)std::floor(ixfloat);
+	int iz = (int)std::floor(izfloat);
 	// TODO: some kind of modulo function?
 	float t = ixfloat - ix;
 	float u = izfloat - iz;
@@ -348,7 +337,7 @@ void Map::render(const Camera& cam)
 		for (int startz = startzmin; startz <= startzmax; startz += SECTION_SIZE) {
 			// TODO: don't send all vertexdata to gpu, if same section still visible as last time?
 			Section *section = find_or_add_section(*this->priv, startx, startz);
-			ensure_y_table_is_ready(*this->priv, section);
+			ensure_y_table_is_ready(*this->priv, startx, startz);
 			glBufferSubData(GL_ARRAY_BUFFER, i++*sizeof(section->vertexdata), sizeof(section->vertexdata), section->vertexdata.data());
 		}
 	}
