@@ -67,7 +67,7 @@ static void link_program(GLuint prog)
 
 GLuint OpenglBoilerplate::create_shader_program(const std::string& vertex_shader)
 {
-	const char *fragment_shader =
+	std::string fragment_shader =
 		"#version 330\n"
 		"\n"
 		"smooth in vec4 vertexToFragmentColor;\n"
