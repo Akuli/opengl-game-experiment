@@ -8,6 +8,7 @@
 #include <array>
 #include <random>
 #include <unordered_map>
+#include <memory>
 #include "camera.hpp"
 #include "log.hpp"
 #include "opengl_boilerplate.hpp"
@@ -56,38 +57,38 @@ static float uniform_random_float(float min, float max)
 	return lerp(min, max, std::rand() / (float)RAND_MAX);
 }
 
-static void generate_section(struct Section *sect)
+static void generate_section(struct Section& section)
 {
-	sect->y_table_and_vertexdata_ready = false;
+	section.y_table_and_vertexdata_ready = false;
 	int i;
 
 	// wide and deep/tall
-	for (i = 0; i < sect->mountains.size()/20; i++) {
+	for (i = 0; i < section.mountains.size()/20; i++) {
 		float h = 5*std::tan(uniform_random_float(-1.4f, 1.4f));
 		float w = uniform_random_float(std::abs(h), 3*std::abs(h));
-		sect->mountains[i] = GaussianCurveMountain(w, h, uniform_random_float(0, SECTION_SIZE), uniform_random_float(0, SECTION_SIZE));
+		section.mountains[i] = GaussianCurveMountain(w, h, uniform_random_float(0, SECTION_SIZE), uniform_random_float(0, SECTION_SIZE));
 	}
 
 	// narrow and shallow
-	for (; i < sect->mountains.size(); i++) {
+	for (; i < section.mountains.size(); i++) {
 		float h = uniform_random_float(0.25f, 1.5f);
 		float w = uniform_random_float(2*h, 5*h);
 		if (rand() % 2)
 			h = -h;
-		sect->mountains[i] = GaussianCurveMountain(w, h, uniform_random_float(0, SECTION_SIZE), uniform_random_float(0, SECTION_SIZE));
+		section.mountains[i] = GaussianCurveMountain(w, h, uniform_random_float(0, SECTION_SIZE), uniform_random_float(0, SECTION_SIZE));
 	}
 
 	// y=e^(-x^2) seems to be pretty much zero for |x| >= 3.
 	// We use this to keep gaussian curves within the neighboring sections.
 	int xzmin = -SECTION_SIZE, xzmax = 2*SECTION_SIZE;
 
-	for (i = 0; i < sect->mountains.size(); i++) {
+	for (i = 0; i < section.mountains.size(); i++) {
 		float mindist = min4(
-			sect->mountains[i].centerx - xzmin,
-			sect->mountains[i].centerz - xzmin,
-			xzmax - sect->mountains[i].centerx,
-			xzmax - sect->mountains[i].centerz);
-		sect->mountains[i].xzscale = min(sect->mountains[i].xzscale, mindist/3);
+			section.mountains[i].centerx - xzmin,
+			section.mountains[i].centerz - xzmin,
+			xzmax - section.mountains[i].centerx,
+			xzmax - section.mountains[i].centerz);
+		section.mountains[i].xzscale = min(section.mountains[i].xzscale, mindist/3);
 	}
 
 	// This loop is too slow to run within a single frame
@@ -97,13 +98,13 @@ static void generate_section(struct Section *sect)
 			int z = zidx - SECTION_SIZE;
 
 			float y = 0;
-			for (int i = 0; i < sect->mountains.size(); i++) {
-				float dx = x - sect->mountains[i].centerx;
-				float dz = z - sect->mountains[i].centerz;
-				float xzscale = sect->mountains[i].xzscale;
-				y += sect->mountains[i].yscale * expf(-1/(xzscale*xzscale) * (dx*dx + dz*dz));
+			for (int i = 0; i < section.mountains.size(); i++) {
+				float dx = x - section.mountains[i].centerx;
+				float dz = z - section.mountains[i].centerz;
+				float xzscale = section.mountains[i].xzscale;
+				y += section.mountains[i].yscale * expf(-1/(xzscale*xzscale) * (dx*dx + dz*dz));
 			}
-			sect->raw_y_table[xidx][zidx] = y;
+			section.raw_y_table[xidx][zidx] = y;
 		}
 	}
 }
@@ -114,9 +115,7 @@ that needs to be added. There's a separate thread that generates them in the
 background. After generating, a section can be added anywhere on the map.
 */
 struct SectionQueue {
-	// TODO: sects should be a vector
-	struct Section* sects[30];  // should have about 4x the room it typically needs, because corner cases
-	int len;
+	std::vector<std::unique_ptr<Section>> sections;
 	SDL_mutex *lock;  // hold this while adding/removing/checking sects or len
 	bool quit;
 };
@@ -129,23 +128,23 @@ static int section_preparing_thread(void *queueptr)
 	while (!queue->quit) {
 		int ret = SDL_LockMutex(queue->lock);
 		SDL_assert(ret == 0);
-		int len = queue->len;
+		int len = queue->sections.size();
 		ret = SDL_UnlockMutex(queue->lock);
 		SDL_assert(ret == 0);
 
-		int maxlen = sizeof(queue->sects)/sizeof(queue->sects[0]);
+		int maxlen = 30;  // about 4x usual size, in case corner cases do something weird
 		if (len == maxlen) {
 			SDL_Delay(10);
 			continue;
 		}
 
 		log_printf("There is room in section queue (%d/%d), generating a new section", len, maxlen);
-		Section *tmp = new Section;
-		generate_section(tmp);  // slow
+		std::unique_ptr<Section> tmp = std::make_unique<Section>();
+		generate_section(*tmp);  // slow
 
 		ret = SDL_LockMutex(queue->lock);
 		SDL_assert(ret == 0);
-		queue->sects[queue->len++] = tmp;
+		queue->sections.push_back(std::move(tmp));
 		ret = SDL_UnlockMutex(queue->lock);
 		SDL_assert(ret == 0);
 	}
@@ -166,7 +165,7 @@ struct IntPairHasher {
 
 struct Map {
 	// TODO: why does unique_ptr not work here?
-	std::unordered_map<std::pair<int, int>, Section*, IntPairHasher> sections;
+	std::unordered_map<std::pair<int, int>, std::unique_ptr<Section>, IntPairHasher> sections;
 
 	struct SectionQueue queue;
 	SDL_Thread *prepthread;
@@ -185,9 +184,11 @@ static Section *find_or_add_section(Map *map, int startx, int startz)
 			int ret = SDL_LockMutex(map->queue.lock);
 			SDL_assert(ret == 0);
 
-			bool empty = (map->queue.len == 0);
-			if (!empty)
-				map->sections[key] = map->queue.sects[--map->queue.len];
+			bool empty = map->queue.sections.empty();
+			if (!empty) {
+				map->sections[key] = std::move(map->queue.sections.end()[-1]);
+				map->queue.sections.pop_back();
+			}
 
 			ret = SDL_UnlockMutex(map->queue.lock);
 			SDL_assert(ret == 0);
@@ -203,61 +204,61 @@ static Section *find_or_add_section(Map *map, int startx, int startz)
 		log_printf("added a section, map now has %d sections", (int)map->sections.size());
 	}
 
-	return map->sections[key];
+	return &*map->sections[key];
 }
 
-static void ensure_y_table_is_ready(struct Map *map, struct Section *sect)
+static void ensure_y_table_is_ready(struct Map *map, struct Section *section)
 {
-	if (sect->y_table_and_vertexdata_ready)
+	if (section->y_table_and_vertexdata_ready)
 		return;
 
 	struct Section *sections[9] = {
-		find_or_add_section(map, sect->startx - SECTION_SIZE, sect->startz - SECTION_SIZE),
-		find_or_add_section(map, sect->startx - SECTION_SIZE, sect->startz),
-		find_or_add_section(map, sect->startx - SECTION_SIZE, sect->startz + SECTION_SIZE),
-		find_or_add_section(map, sect->startx, sect->startz - SECTION_SIZE),
-		sect,
-		find_or_add_section(map, sect->startx, sect->startz + SECTION_SIZE),
-		find_or_add_section(map, sect->startx + SECTION_SIZE, sect->startz - SECTION_SIZE),
-		find_or_add_section(map, sect->startx + SECTION_SIZE, sect->startz),
-		find_or_add_section(map, sect->startx + SECTION_SIZE, sect->startz + SECTION_SIZE),
+		find_or_add_section(map, section->startx - SECTION_SIZE, section->startz - SECTION_SIZE),
+		find_or_add_section(map, section->startx - SECTION_SIZE, section->startz),
+		find_or_add_section(map, section->startx - SECTION_SIZE, section->startz + SECTION_SIZE),
+		find_or_add_section(map, section->startx, section->startz - SECTION_SIZE),
+		section,
+		find_or_add_section(map, section->startx, section->startz + SECTION_SIZE),
+		find_or_add_section(map, section->startx + SECTION_SIZE, section->startz - SECTION_SIZE),
+		find_or_add_section(map, section->startx + SECTION_SIZE, section->startz),
+		find_or_add_section(map, section->startx + SECTION_SIZE, section->startz + SECTION_SIZE),
 	};
 
 	for (int xidx = 0; xidx <= SECTION_SIZE; xidx++) {
 		for (int zidx = 0; zidx <= SECTION_SIZE; zidx++) {
 			float y = 0;
 			for (struct Section **s = sections; s < sections+9; s++) {
-				int xdiff = sect->startx - (*s)->startx;
-				int zdiff = sect->startz - (*s)->startz;
+				int xdiff = section->startx - (*s)->startx;
+				int zdiff = section->startz - (*s)->startz;
 				int ix = xidx + SECTION_SIZE + xdiff;
 				int iz = zidx + SECTION_SIZE + zdiff;
 				y += (*s)->raw_y_table[ix][iz];
 			}
 
-			sect->y_table[xidx][zidx] = y;
+			section->y_table[xidx][zidx] = y;
 		}
 	}
 
 	int i = 0;
 	for (int ix = 0; ix < SECTION_SIZE; ix++) {
 		for (int iz = 0; iz < SECTION_SIZE; iz++) {
-			float sx = sect->startx, sz = sect->startz;  // c++ sucks ass
+			float sx = section->startx, sz = section->startz;  // c++ sucks ass
 
-			sect->vertexdata[i++] = std::array<vec3, 3>{
-				vec3{sx + ix  , sect->y_table[ix  ][iz  ], sz + iz  },
-				vec3{sx + ix+1, sect->y_table[ix+1][iz  ], sz + iz  },
-				vec3{sx + ix  , sect->y_table[ix  ][iz+1], sz + iz+1},
+			section->vertexdata[i++] = std::array<vec3, 3>{
+				vec3{sx + ix  , section->y_table[ix  ][iz  ], sz + iz  },
+				vec3{sx + ix+1, section->y_table[ix+1][iz  ], sz + iz  },
+				vec3{sx + ix  , section->y_table[ix  ][iz+1], sz + iz+1},
 			};
-			sect->vertexdata[i++] = std::array<vec3, 3>{
-				vec3{sx + ix+1, sect->y_table[ix+1][iz+1], sz + iz+1},
-				vec3{sx + ix+1, sect->y_table[ix+1][iz  ], sz + iz  },
-				vec3{sx + ix  , sect->y_table[ix  ][iz+1], sz + iz+1},
+			section->vertexdata[i++] = std::array<vec3, 3>{
+				vec3{sx + ix+1, section->y_table[ix+1][iz+1], sz + iz+1},
+				vec3{sx + ix+1, section->y_table[ix+1][iz  ], sz + iz  },
+				vec3{sx + ix  , section->y_table[ix  ][iz+1], sz + iz+1},
 			};
 		}
 	}
-	SDL_assert(i == sect->vertexdata.size());
+	SDL_assert(i == section->vertexdata.size());
 
-	sect->y_table_and_vertexdata_ready = true;
+	section->y_table_and_vertexdata_ready = true;
 }
 
 // round down to multiple of SECTION_SIZE
@@ -268,11 +269,11 @@ static int get_section_start_coordinate(float val)
 
 float map_getheight(struct Map *map, float x, float z)
 {
-	struct Section *sect = find_or_add_section(map, get_section_start_coordinate(x), get_section_start_coordinate(z));
-	ensure_y_table_is_ready(map, sect);
+	struct Section *section = find_or_add_section(map, get_section_start_coordinate(x), get_section_start_coordinate(z));
+	ensure_y_table_is_ready(map, section);
 
-	float ixfloat = x - sect->startx;
-	float izfloat = z - sect->startz;
+	float ixfloat = x - section->startx;
+	float izfloat = z - section->startz;
 	int ix = (int)floorf(ixfloat);
 	int iz = (int)floorf(izfloat);
 	// TODO: some kind of modulo function?
@@ -280,10 +281,10 @@ float map_getheight(struct Map *map, float x, float z)
 	float u = izfloat - iz;
 
 	// weighted average, weight describes how close to a given corner
-	return (1-t)*(1-u)*sect->y_table[ix][iz]
-		+ (1-t)*u*sect->y_table[ix][iz+1]
-		+ t*(1-u)*sect->y_table[ix+1][iz]
-		+ t*u*sect->y_table[ix+1][iz+1];
+	return (1-t)*(1-u)*section->y_table[ix][iz]
+		+ (1-t)*u*section->y_table[ix][iz+1]
+		+ t*(1-u)*section->y_table[ix+1][iz]
+		+ t*u*section->y_table[ix+1][iz+1];
 }
 
 mat3 map_get_rotation(struct Map *map, float x, float z)
@@ -348,9 +349,9 @@ void map_render(struct Map *map, const struct Camera *cam)
 	for (int startx = startxmin; startx <= startxmax; startx += SECTION_SIZE) {
 		for (int startz = startzmin; startz <= startzmax; startz += SECTION_SIZE) {
 			// TODO: don't send all vertexdata to gpu, if same section still visible as last time?
-			struct Section *sect = find_or_add_section(map, startx, startz);
-			ensure_y_table_is_ready(map, sect);
-			glBufferSubData(GL_ARRAY_BUFFER, i++*sizeof(sect->vertexdata), sizeof(sect->vertexdata), sect->vertexdata.data());
+			struct Section *section = find_or_add_section(map, startx, startz);
+			ensure_y_table_is_ready(map, section);
+			glBufferSubData(GL_ARRAY_BUFFER, i++*sizeof(section->vertexdata), sizeof(section->vertexdata), section->vertexdata.data());
 		}
 	}
 	SDL_assert(i == nsections);
