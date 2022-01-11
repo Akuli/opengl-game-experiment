@@ -11,7 +11,9 @@ public:
 	~Enemy();
 	Enemy(const Enemy&) = delete;
 
+	float x, z;  // y depends on map
 	void render(const Camera& camera, Map& map) const;
+	void move_towards_player(vec3 player_location);
 
 private:
 	GLuint shaderprogram;
