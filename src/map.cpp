@@ -275,8 +275,7 @@ float Map::get_height(float x, float z)
 
 mat3 Map::get_rotation_matrix(float x, float z)
 {
-	// a bit of a hack, but works well enough
-	float h = 0.01f;
+	float h = 0.5f;  // Bigger value --> smoother but less accurate result
 	vec3 v = { 2*h, this->get_height(x+h,z) - this->get_height(x-h,z), 0 };
 	vec3 w = { 0, this->get_height(x,z+h) - this->get_height(x,z-h), 2*h };
 	vec3 normal = w.cross(v);
