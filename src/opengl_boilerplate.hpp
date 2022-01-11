@@ -3,14 +3,20 @@
 
 #include <GL/glew.h>
 #include <SDL2/SDL.h>
+#include <string>
 
-struct OpenglBoilerplateState {
+class OpenglBoilerplate {
+public:
 	SDL_Window *window;
+
+	OpenglBoilerplate();
+	~OpenglBoilerplate();
+	OpenglBoilerplate(const OpenglBoilerplate&) = delete;
+
+	static GLuint create_shader_program(const std::string& vertex_shader);
+
+private:
 	SDL_GLContext ctx;
 };
-
-struct OpenglBoilerplateState opengl_boilerplate_init(void);
-GLuint opengl_boilerplate_create_shader_program(const char *vertex_shader, const char *fragment_shader);
-void opengl_boilerplate_quit(const struct OpenglBoilerplateState *state);
 
 #endif

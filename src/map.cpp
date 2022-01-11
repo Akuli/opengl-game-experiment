@@ -397,7 +397,7 @@ Map::Map()
 		"    vertexToFragmentColor = darkerAtDistance(rgb, pos);\n"
 		"}\n"
 		;
-	this->priv->shaderprogram = opengl_boilerplate_create_shader_program(vertex_shader, NULL);
+	this->priv->shaderprogram = OpenglBoilerplate::create_shader_program(vertex_shader);
 }
 
 Map::~Map()

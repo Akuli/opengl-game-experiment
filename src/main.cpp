@@ -16,7 +16,7 @@ int main(int argc, char **argv)
 
 	std::srand(std::time(NULL));
 
-	struct OpenglBoilerplateState bpstate = opengl_boilerplate_init();
+	OpenglBoilerplate boilerplate = {};
 
 	struct Map map = {};
 	struct Enemy en = enemy_new();
@@ -41,13 +41,12 @@ int main(int argc, char **argv)
 
 		map.render(cam);
 		enemy_render(&en, &cam, map);
-		SDL_GL_SwapWindow(bpstate.window);
+		SDL_GL_SwapWindow(boilerplate.window);
 
 		SDL_Event e;
 		while (SDL_PollEvent(&e)) switch(e.type) {
 			case SDL_QUIT:
 				enemy_destroy(&en);
-				opengl_boilerplate_quit(&bpstate);
 				return 0;
 
 			case SDL_KEYDOWN:

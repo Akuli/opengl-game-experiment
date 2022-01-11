@@ -102,7 +102,7 @@ struct Enemy enemy_new(void)
 		"    vertexToFragmentColor = darkerAtDistance(vec3(1,0,1)*mix(0.1, 0.4, 1-positionAndColor.w), pos);\n"
 		"}\n"
 		;
-	enemy.shaderprogram = opengl_boilerplate_create_shader_program(vertex_shader, NULL);
+	enemy.shaderprogram = OpenglBoilerplate::create_shader_program(vertex_shader);
 
 	const std::vector<std::array<vec4, 3>>& vertexdata = get_vertex_data();
 

@@ -7,7 +7,7 @@
 #include "camera.hpp"
 
 // use glDeleteShader afterwards
-static GLuint create_shader(GLenum type, const char *source, const char *shadername)
+static GLuint create_shader(GLenum type, const std::string& source, const char *shadername)
 {
 	const char *boilerplate =
 		"vec4 darkerAtDistance(in vec3 brightColor, in vec3 locationFromCamera)\n"
@@ -24,23 +24,18 @@ static GLuint create_shader(GLenum type, const char *source, const char *shadern
 		"}\n"
 		;
 
-	const char *boilerplateloc = strstr(source, "BOILERPLATE_GOES_HERE");
-	char *tmp;
-	if (boilerplateloc) {
-		tmp = (char*)calloc(1, strlen(source) + strlen(boilerplate) + 1);
-		if (!tmp)
-			log_printf_abort("not enough memory");
-
-		strncpy(tmp, source, boilerplateloc-source);
-		strcat(tmp, boilerplate);
-		strcat(tmp, boilerplateloc + strlen("BOILERPLATE_GOES_HERE"));
-		source = tmp;
+	std::string marker = "BOILERPLATE_GOES_HERE";
+	std::string::size_type boilerplateloc = source.find(marker);
+	std::string actual_source;
+	if (boilerplateloc == std::string::npos) {
+		actual_source = source;
 	} else {
-		tmp = NULL;
+		actual_source = source.substr(0, boilerplateloc) + boilerplate + source.substr(boilerplateloc + marker.length());
 	}
 
 	GLuint shader = glCreateShader(type);
-	glShaderSource(shader, 1, &source, NULL);
+	const char *tmp = actual_source.c_str();
+	glShaderSource(shader, 1, &tmp, NULL);
 	glCompileShader(shader);
 
 	GLint status;
@@ -53,8 +48,6 @@ static GLuint create_shader(GLenum type, const char *source, const char *shadern
 		glGetShaderInfoLog(shader, loglen, NULL, log);
 		log_printf_abort("compiling shader \"%s\" failed: %s", shadername, log);
 	}
-
-	free(tmp);
 	return shader;
 }
 
@@ -74,22 +67,19 @@ static void link_program(GLuint prog)
 	}
 }
 
-GLuint opengl_boilerplate_create_shader_program(const char *vertex_shader, const char *fragment_shader)
+GLuint OpenglBoilerplate::create_shader_program(const std::string& vertex_shader)
 {
-	SDL_assert(vertex_shader);
-	if (!fragment_shader) {
-		fragment_shader =
-			"#version 330\n"
-			"\n"
-			"smooth in vec4 vertexToFragmentColor;\n"
-			"out vec4 outColor;\n"
-			"\n"
-			"void main(void)\n"
-			"{\n"
-			"    outColor = vertexToFragmentColor;\n"
-			"}\n"
-			;
-	}
+	const char *fragment_shader =
+		"#version 330\n"
+		"\n"
+		"smooth in vec4 vertexToFragmentColor;\n"
+		"out vec4 outColor;\n"
+		"\n"
+		"void main(void)\n"
+		"{\n"
+		"    outColor = vertexToFragmentColor;\n"
+		"}\n"
+		;
 
 	GLuint prog = glCreateProgram();
 
@@ -106,7 +96,7 @@ GLuint opengl_boilerplate_create_shader_program(const char *vertex_shader, const
 	return prog;
 }
 
-struct OpenglBoilerplateState opengl_boilerplate_init(void)
+OpenglBoilerplate::OpenglBoilerplate()
 {
 	SDL_assert(SDL_Init(SDL_INIT_VIDEO) == 0);
 
@@ -115,15 +105,15 @@ struct OpenglBoilerplateState opengl_boilerplate_init(void)
 	SDL_GL_SetAttribute(SDL_GL_ACCELERATED_VISUAL, 1);
 	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
 
-	SDL_Window *wnd = SDL_CreateWindow(
+	this->window = SDL_CreateWindow(
 		"title", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
 		CAMERA_SCREEN_WIDTH, CAMERA_SCREEN_HEIGHT,
 		SDL_WINDOW_OPENGL);
-	if (!wnd)
+	if (!this->window)
 		log_printf_abort("SDL_CreateWindow failed: %s", SDL_GetError());
 
-	SDL_GLContext ctx = SDL_GL_CreateContext(wnd);
-	if (!ctx)
+	this->ctx = SDL_GL_CreateContext(this->window);
+	if (!this->ctx)
 		log_printf_abort("SDL_GL_CreateContext failed: %s", SDL_GetError());
 
 	// TODO: understand why exactly i need sdl2+glew+opengl
@@ -147,13 +137,11 @@ struct OpenglBoilerplateState opengl_boilerplate_init(void)
 	glBindVertexArray(vertarr);
 
 	glViewport(0, 0, CAMERA_SCREEN_WIDTH, CAMERA_SCREEN_HEIGHT);
-
-	return OpenglBoilerplateState{ .window = wnd, .ctx = ctx };
 }
 
-void opengl_boilerplate_quit(const struct OpenglBoilerplateState *state)
+OpenglBoilerplate::~OpenglBoilerplate()
 {
-	SDL_GL_DeleteContext(state->ctx);
-	SDL_DestroyWindow(state->window);
+	SDL_GL_DeleteContext(this->ctx);
+	SDL_DestroyWindow(this->window);
 	SDL_Quit();
 }
