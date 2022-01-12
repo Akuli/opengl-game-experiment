@@ -26,4 +26,7 @@ void PhysicsObject::update(Map& map, float dt)
 	vec3 acceleration = force;  // TODO: different masses?
 	this->speed += acceleration*dt;
 	this->location += speed*dt;
+
+	if (this->speed.length() > this->max_speed)
+		this->speed = this->speed.with_length(this->max_speed);
 }

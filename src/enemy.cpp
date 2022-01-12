@@ -63,7 +63,8 @@ void Enemy::render(const Camera& cam, Map& map) const
 	float above_floor = location.y - map.get_height(location.x, location.z);
 	if (above_floor > 0) {
 		// When the enemy is flying, don't follow ground shapes much
-		normal_vector.y += -1 + std::exp(above_floor);
+		normal_vector /= normal_vector.length();
+		normal_vector.y += above_floor*above_floor;
 	}
 
 	glUseProgram(this->shaderprogram);
@@ -99,7 +100,7 @@ void Enemy::move_towards_player(vec3 player_location, Map& map, float dt)
 	this->physics_object.update(map, dt);
 }
 
-Enemy::Enemy(vec3 initial_location) : physics_object{PhysicsObject(initial_location)}
+Enemy::Enemy(vec3 initial_location) : physics_object{PhysicsObject(initial_location, 6)}
 {
 	std::string vertex_shader =
 		"#version 330\n"
