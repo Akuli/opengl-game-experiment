@@ -8,9 +8,7 @@
 class PhysicsObject {
 public:
 	PhysicsObject(vec3 initial_location, float max_speed = HUGE_VALF) : max_speed(max_speed), location(initial_location) {}
-
 	PhysicsObject(const PhysicsObject&) = delete;
-	PhysicsObject(PhysicsObject&&) = default;
 
 	inline vec3 get_location() const { return this->location; }
 	inline void set_extra_force(vec3 force) { this->extra_force = force; }
