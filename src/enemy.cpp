@@ -65,9 +65,10 @@ void Enemy::render(const Camera& cam, Map& map) const
 	glUniformMatrix3fv(
 		glGetUniformLocation(this->shaderprogram, "world2cam"),
 		1, true, &cam.world2cam.rows[0][0]);
+	mat3 rotation = mat3::rotation_to_tilt_y_towards_vector(map.get_normal_vector(this->x, this->z));
 	glUniformMatrix3fv(
 		glGetUniformLocation(this->shaderprogram, "mapRotation"),
-		1, true, &map.get_rotation_matrix(this->x, this->z).rows[0][0]);
+		1, true, &rotation.rows[0][0]);
 
 	glBindBuffer(GL_ARRAY_BUFFER, this->vbo);
 	glEnableVertexAttribArray(0);

@@ -18,11 +18,8 @@ public:
 	// Methods are not const, because map may be expanded dynamically when they are called
 
 	float get_height(float x, float z);
+	vec3 get_normal_vector(float x, float z);  // arbitrary length, points away from surface
 	void render(const Camera& camera);
-
-	// Returns identity matrix, if floor is flat (get_height() returns a constant).
-	// In general, returns a matrix that tilts in floor direction, mapping (0,1,0) to a normal vector.
-	mat3 get_rotation_matrix(float x, float z);
 
 private:
 	std::unique_ptr<MapPrivate> priv;
