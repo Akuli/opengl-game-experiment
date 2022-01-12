@@ -3,6 +3,7 @@
 
 #include <GL/glew.h>
 #include "camera.hpp"
+#include "linalg.hpp"
 #include "map.hpp"
 
 class Enemy {
