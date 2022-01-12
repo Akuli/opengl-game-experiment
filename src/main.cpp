@@ -7,6 +7,7 @@
 #include "config.hpp"
 #include "enemy.hpp"
 #include "linalg.hpp"
+#include "log.hpp"
 #include "map.hpp"
 #include "opengl_boilerplate.hpp"
 #include "physics.hpp"
@@ -16,6 +17,41 @@ static double counter_in_seconds()
 	return SDL_GetPerformanceCounter() / static_cast<double>(SDL_GetPerformanceFrequency());
 }
 
+struct GameState {
+	Map map;
+	PhysicsObject player = PhysicsObject(vec3{0, map.get_height(0,0), 0});
+	Camera camera;
+	float camera_angle;
+	std::vector<Enemy> enemies;
+
+	GameState(const GameState &) = delete;
+
+	double next_enemy_time = counter_in_seconds() + ENEMY_DELAY;
+	void add_enemy_if_needed() {
+		if (counter_in_seconds() < this->next_enemy_time || this->enemies.size() == 1)
+			return;
+
+		log_printf("There are %d enemies, adding one more", (int)this->enemies.size());
+		float x, z;
+		Enemy::decide_location(this->player.get_location(), x, z);
+		log_printf("Enemy: x=%f z=%f", x, z);
+		log_printf("Player: x=%f z=%f", this->player.get_location().x, this->player.get_location().z);
+		this->enemies.push_back({ vec3{x, this->map.get_height(x, z), z} });
+		this->next_enemy_time += ENEMY_DELAY;
+	}
+
+	void update_physics(float dt, int camera_angle_direction) {
+		this->camera_angle += PLAYER_TURNING_SPEED*dt*camera_angle_direction;
+		this->camera.cam2world = mat3::rotation_about_y(this->camera_angle);
+		this->camera.world2cam = mat3::rotation_about_y(-this->camera_angle);
+
+		this->player.update(this->map, dt);
+		for (Enemy& e : this->enemies) {
+			e.move_towards_player(this->camera.location, this->map, dt);
+		}
+	}
+};
+
 int main(int argc, char **argv)
 {
 	(void)argc;
@@ -24,37 +60,30 @@ int main(int argc, char **argv)
 	std::srand(std::time(nullptr));
 
 	OpenglBoilerplate boilerplate = {};
-	Map map = {};
-	Enemy enemy = {vec3{0,0,-50}};  // TODO: get rid of hard-coded place
-	Camera camera = {};
-	PhysicsObject player = {vec3{0,map.get_height(0, 0),0}};
+	GameState game_state = {};
 
 	int zdir = 0;
 	int angledir = 0;
-	float angle = 0;
 
-	double last_time = counter_in_seconds();
+	double last_time = counter_in_seconds() - 1e-5;  // Make sure at least one physics iteration runs below
 
 	while (1) {
-		for (double remaining = counter_in_seconds() - last_time; remaining > 0; remaining -= MIN_PHYSICS_STEP_SECONDS)
+		for (double rem = counter_in_seconds() - last_time; rem > 0; rem -= MIN_PHYSICS_STEP_SECONDS)
 		{
-			float dt = static_cast<float>(std::min(remaining, MIN_PHYSICS_STEP_SECONDS));
-
-			angle += PLAYER_TURNING_SPEED*dt*angledir;
-			camera.cam2world = mat3::rotation_about_y(angle);
-			camera.world2cam = mat3::rotation_about_y(-angle);
-			player.update(map, dt);
-			enemy.move_towards_player(camera.location, map, dt);
+			float dt = static_cast<float>(std::min(rem, MIN_PHYSICS_STEP_SECONDS));
+			game_state.update_physics(dt, angledir);
 		}
 		last_time = counter_in_seconds();
 
-		camera.location = player.get_location() + vec3{0,CAMERA_HEIGHT,0};
+		game_state.camera.location = game_state.player.get_location() + vec3{0,CAMERA_HEIGHT,0};
+
+		game_state.add_enemy_if_needed();
 
 		glClearColor(0, 0, 0, 0);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-		map.render(camera);
-		enemy.render(camera, map);
+		game_state.map.render(game_state.camera);
+		for (const Enemy& e : game_state.enemies)
+			e.render(game_state.camera, game_state.map);
 		SDL_GL_SwapWindow(boilerplate.window);
 
 		SDL_Event e;
@@ -86,6 +115,6 @@ int main(int argc, char **argv)
 				break;
 		}
 
-		player.set_extra_force(camera.cam2world * vec3{0, 0, PLAYER_MOVING_FORCE*zdir});
+		game_state.player.set_extra_force(game_state.camera.cam2world * vec3{0, 0, PLAYER_MOVING_FORCE*zdir});
 	}
 }

@@ -130,9 +130,6 @@ static_assert(sizeof(vec4) == 4*sizeof(float));
 static_assert(sizeof(mat2) == 2*2*sizeof(float));
 static_assert(sizeof(mat3) == 3*3*sizeof(float));
 
-template<typename T> T lerp(T a, T b, float t) { return a + (b-a)*t; }
-inline float unlerp(float a, float b, float lerped) { return (lerped-a)/(b-a); }
-
 class Plane {
 public:
 	// equation of plane represented as:  (x,y,z) dot normal = constant
