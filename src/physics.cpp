@@ -11,7 +11,7 @@ void PhysicsObject::update(Map& map, float dt)
 	if (this->location.y < map_height) {
 		this->touching_ground = true;
 
-		float friction = 1.f * (map_height - this->location.y);
+		float friction = map_height - this->location.y;
 		if (friction > 1)
 			friction = 1;
 
