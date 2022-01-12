@@ -57,6 +57,51 @@ static const std::vector<std::array<vec4, 3>>& get_vertex_data()
 	return vertexdata;
 }
 
+// vbo = Vertex Buffer Object, represents triangles going to gpu
+static void get_shader_program_and_vbo(GLuint& shader_program_out, GLuint& vbo_out)
+{
+	static GLuint shader_program = 0, vbo = 0;
+
+	if (shader_program == 0 && vbo == 0) {
+		/*
+		Clean up code, in case this is changed at some point:
+
+		glDeleteProgram(shaderprogram);
+		glDeleteBuffers(1, &vbo);
+		*/
+		std::string vertex_shader =
+			"#version 330\n"
+			"\n"
+			"layout(location = 0) in vec4 positionAndColor;\n"
+			"uniform vec3 addToLocation;\n"
+			"uniform mat3 world2cam;\n"
+			"uniform mat3 mapRotation;\n"
+			"smooth out vec4 vertexToFragmentColor;\n"
+			"\n"
+			"BOILERPLATE_GOES_HERE\n"
+			"\n"
+			"void main(void)\n"
+			"{\n"
+			"    vec3 pos = world2cam*(mapRotation*positionAndColor.xyz + addToLocation);\n"
+			"    gl_Position = locationFromCameraToGlPosition(pos);\n"
+			"    vertexToFragmentColor = darkerAtDistance(vec3(1,0,1)*mix(0.1, 0.4, 1-positionAndColor.w), pos);\n"
+			"}\n"
+			;
+		shader_program = OpenglBoilerplate::create_shader_program(vertex_shader);
+
+		const std::vector<std::array<vec4, 3>>& vertexdata = get_vertex_data();
+		glGenBuffers(1, &vbo);
+		SDL_assert(vbo != 0);
+		glBindBuffer(GL_ARRAY_BUFFER, vbo);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(vertexdata[0])*vertexdata.size(), vertexdata.data(), GL_DYNAMIC_DRAW);
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
+	}
+
+	SDL_assert(shader_program != 0 && vbo != 0);
+	shader_program_out = shader_program;
+	vbo_out = vbo;
+}
+
 void Enemy::render(const Camera& cam, Map& map) const
 {
 	vec3 location = this->physics_object.get_location();
@@ -69,23 +114,26 @@ void Enemy::render(const Camera& cam, Map& map) const
 		normal_vector.y += above_floor*above_floor;
 	}
 
-	glUseProgram(this->shaderprogram);
+	GLuint shader_program, vbo;
+	get_shader_program_and_vbo(shader_program, vbo);
+
+	glUseProgram(shader_program);
 
 	vec3 relative_location = location - cam.location;
 	glUniform3f(
-		glGetUniformLocation(this->shaderprogram, "addToLocation"),
+		glGetUniformLocation(shader_program, "addToLocation"),
 		relative_location.x, relative_location.y, relative_location.z);
 
 	glUniformMatrix3fv(
-		glGetUniformLocation(this->shaderprogram, "world2cam"),
+		glGetUniformLocation(shader_program, "world2cam"),
 		1, true, &cam.world2cam.rows[0][0]);
 
 	mat3 rotation = mat3::rotation_to_tilt_y_towards_vector(normal_vector);
 	glUniformMatrix3fv(
-		glGetUniformLocation(this->shaderprogram, "mapRotation"),
+		glGetUniformLocation(shader_program, "mapRotation"),
 		1, true, &rotation.rows[0][0]);
 
-	glBindBuffer(GL_ARRAY_BUFFER, this->vbo);
+	glBindBuffer(GL_ARRAY_BUFFER, vbo);
 	glEnableVertexAttribArray(0);
 	glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 0, 0);
 	glDrawArrays(GL_TRIANGLES, 0, 3*get_vertex_data().size());
@@ -104,39 +152,6 @@ void Enemy::move_towards_player(vec3 player_location, Map& map, float dt)
 
 Enemy::Enemy(vec3 initial_location) : physics_object{PhysicsObject(initial_location, ENEMY_MAX_SPEED)}
 {
-	std::string vertex_shader =
-		"#version 330\n"
-		"\n"
-		"layout(location = 0) in vec4 positionAndColor;\n"
-		"uniform vec3 addToLocation;\n"
-		"uniform mat3 world2cam;\n"
-		"uniform mat3 mapRotation;\n"
-		"smooth out vec4 vertexToFragmentColor;\n"
-		"\n"
-		"BOILERPLATE_GOES_HERE\n"
-		"\n"
-		"void main(void)\n"
-		"{\n"
-		"    vec3 pos = world2cam*(mapRotation*positionAndColor.xyz + addToLocation);\n"
-		"    gl_Position = locationFromCameraToGlPosition(pos);\n"
-		"    vertexToFragmentColor = darkerAtDistance(vec3(1,0,1)*mix(0.1, 0.4, 1-positionAndColor.w), pos);\n"
-		"}\n"
-		;
-	this->shaderprogram = OpenglBoilerplate::create_shader_program(vertex_shader);
-
-	const std::vector<std::array<vec4, 3>>& vertexdata = get_vertex_data();
-
-	glGenBuffers(1, &this->vbo);
-	SDL_assert(this->vbo != 0);
-	glBindBuffer(GL_ARRAY_BUFFER, this->vbo);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(vertexdata[0])*vertexdata.size(), vertexdata.data(), GL_DYNAMIC_DRAW);
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-}
-
-Enemy::~Enemy()
-{
-	glDeleteProgram(this->shaderprogram);
-	glDeleteBuffers(1, &this->vbo);
 }
 
 void Enemy::decide_location(vec3 player_location, float& x, float& z)

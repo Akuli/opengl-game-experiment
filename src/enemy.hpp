@@ -10,7 +10,6 @@
 class Enemy {
 public:
 	Enemy(vec3 initial_location);
-	~Enemy();
 	Enemy(const Enemy&) = delete;
 
 	void render(const Camera& camera, Map& map) const;
@@ -19,8 +18,6 @@ public:
 	static void decide_location(vec3 player_location, float& x, float& z);
 
 private:
-	GLuint shaderprogram;
-	GLuint vbo;  // Vertex Buffer Object, represents triangles going to gpu
 	PhysicsObject physics_object;
 };
 
