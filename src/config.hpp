@@ -11,5 +11,6 @@
 #define GRAVITY 20
 #define PLAYER_MOVING_FORCE 40.0f
 #define ENEMY_MOVING_FORCE 30.0f
+#define ENEMY_MAX_SPEED 6
 
 #endif

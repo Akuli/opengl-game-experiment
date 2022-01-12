@@ -100,7 +100,7 @@ void Enemy::move_towards_player(vec3 player_location, Map& map, float dt)
 	this->physics_object.update(map, dt);
 }
 
-Enemy::Enemy(vec3 initial_location) : physics_object{PhysicsObject(initial_location, 6)}
+Enemy::Enemy(vec3 initial_location) : physics_object{PhysicsObject(initial_location, ENEMY_MAX_SPEED)}
 {
 	std::string vertex_shader =
 		"#version 330\n"
