@@ -45,7 +45,7 @@ static const std::vector<std::array<vec4, 3>>& get_vertex_data()
 		for (std::array<vec4, 3>& triangle : vertexdata) {
 			for (vec4& corner : triangle) {
 				corner.x *= 2;
-				corner.y *= 3;  // taller than wide
+				corner.y *= 10;  // taller than wide
 				corner.z *= 2;
 			}
 		}

@@ -13,7 +13,7 @@ static GLuint create_shader(GLenum type, const std::string& source, const char *
 	std::string boilerplate =
 		"vec4 darkerAtDistance(in vec3 brightColor, in vec3 locationFromCamera)\n"
 		"{\n"
-		"    vec3 rgb = brightColor * exp(-0.0003*pow(30+length(locationFromCamera),2));\n"
+		"    vec3 rgb = brightColor;// * exp(-0.0003*pow(30+length(locationFromCamera),2));\n"
 		"    return vec4(rgb.x, rgb.y, rgb.z, 1);\n"
 		"}\n"
 		"\n"
