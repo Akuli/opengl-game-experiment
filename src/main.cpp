@@ -1,15 +1,15 @@
 #include <GL/glew.h>
 #include <SDL2/SDL.h>
+#include <algorithm>
 #include <cstdlib>
-#include <utility>
 #include <ctime>
 #include "camera.hpp"
 #include "config.hpp"
 #include "enemy.hpp"
 #include "linalg.hpp"
-#include "log.hpp"
 #include "map.hpp"
 #include "opengl_boilerplate.hpp"
+#include "physics.hpp"
 
 static double counter_in_seconds()
 {

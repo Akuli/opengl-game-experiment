@@ -1,6 +1,5 @@
-#include "config.hpp"
-#include "log.hpp"
 #include "physics.hpp"
+#include "config.hpp"
 
 void PhysicsObject::update(Map& map, float dt)
 {

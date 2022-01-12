@@ -8,7 +8,6 @@
 #include "camera.hpp"
 #include "config.hpp"
 #include "linalg.hpp"
-#include "log.hpp"
 #include "map.hpp"
 #include "opengl_boilerplate.hpp"
 

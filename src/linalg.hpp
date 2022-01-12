@@ -2,7 +2,7 @@
 #define LINALG_H
 
 #include <array>
-#include <cmath>
+#include <cmath>  // IWYU pragma: keep
 
 class vec2 {
 public:

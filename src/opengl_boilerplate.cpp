@@ -1,9 +1,8 @@
+#include "opengl_boilerplate.hpp"
 #include <GL/glew.h>
 #include <SDL2/SDL.h>
-#include "log.hpp"
-#include "opengl_boilerplate.hpp"
-#include "camera.hpp"
 #include "config.hpp"
+#include "log.hpp"
 
 // use glDeleteShader afterwards
 static GLuint create_shader(GLenum type, const std::string& source, const char *shadername)

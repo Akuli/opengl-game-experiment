@@ -1,6 +1,7 @@
 #ifndef PHYSICS_H
 #define PHYSICS_H
 
+#include <cmath>
 #include "linalg.hpp"
 #include "map.hpp"
 
