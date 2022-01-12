@@ -15,6 +15,6 @@
 #define ENEMY_MAX_SPEED 6
 #define PLAYER_TURNING_SPEED 1.8f  // radians per second
 
-#define ENEMY_DELAY 1
+#define ENEMY_DELAY 5
 
 #endif

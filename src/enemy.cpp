@@ -59,7 +59,6 @@ static const std::vector<std::array<vec4, 3>>& get_vertex_data()
 
 void Enemy::render(const Camera& cam, Map& map) const
 {
-	log_printf("Enemy render %p %d", (void*)this, this->vbo);
 	vec3 location = this->physics_object.get_location();
 
 	vec3 normal_vector = map.get_normal_vector(location.x, location.z);
@@ -132,7 +131,6 @@ Enemy::Enemy(vec3 initial_location) : physics_object{PhysicsObject(initial_locat
 	glBindBuffer(GL_ARRAY_BUFFER, this->vbo);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(vertexdata[0])*vertexdata.size(), vertexdata.data(), GL_DYNAMIC_DRAW);
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
-	log_printf("Enemy ctor %p vbo=%d", this, this->vbo);
 }
 
 Enemy::~Enemy()
@@ -155,6 +153,6 @@ void Enemy::decide_location(vec3 player_location, float& x, float& z)
 		distance = std::hypot(relative_x, relative_z);
 	} while (!(VIEW_RADIUS < distance && distance < ENEMY_PLAYER_INITIAL_MAX_DISTANCE));
 
-	x = player_location.x + 1+0*relative_x;
-	z = player_location.z + 1+0*relative_z;
+	x = player_location.x + relative_x;
+	z = player_location.z + relative_z;
 }

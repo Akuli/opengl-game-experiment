@@ -29,14 +29,12 @@ struct GameState {
 
 	double next_enemy_time = counter_in_seconds() + ENEMY_DELAY;
 	void add_enemy_if_needed() {
-		if (counter_in_seconds() < this->next_enemy_time || this->enemies.size() == 1)
+		if (counter_in_seconds() < this->next_enemy_time)
 			return;
 
 		log_printf("There are %d enemies, adding one more", (int)this->enemies.size());
 		float x, z;
 		Enemy::decide_location(this->player.get_location(), x, z);
-		log_printf("Enemy: x=%f z=%f", x, z);
-		log_printf("Player: x=%f z=%f", this->player.get_location().x, this->player.get_location().z);
 		this->enemies.push_back(std::make_unique<Enemy>(vec3{ x, this->map.get_height(x, z), z }));
 		this->next_enemy_time += ENEMY_DELAY;
 	}
