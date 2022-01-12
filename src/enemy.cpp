@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 #include "camera.hpp"
+#include "config.hpp"
 #include "linalg.hpp"
 #include "log.hpp"
 #include "map.hpp"
@@ -96,7 +97,7 @@ void Enemy::move_towards_player(vec3 player_location, Map& map, float dt)
 {
 	vec3 force = player_location - this->physics_object.get_location();
 	force.y = 0;
-	this->physics_object.set_extra_force(force.with_length(30));
+	this->physics_object.set_extra_force(force.with_length(ENEMY_MOVING_FORCE));
 	this->physics_object.update(map, dt);
 }
 

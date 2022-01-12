@@ -1,8 +1,10 @@
 #include <GL/glew.h>
 #include <SDL2/SDL.h>
 #include <cstdlib>
+#include <utility>
 #include <ctime>
 #include "camera.hpp"
+#include "config.hpp"
 #include "enemy.hpp"
 #include "linalg.hpp"
 #include "log.hpp"
@@ -23,9 +25,9 @@ int main(int argc, char **argv)
 
 	OpenglBoilerplate boilerplate = {};
 	Map map = {};
-	Enemy enemy = {vec3{0,0,-50}};
+	Enemy enemy = {vec3{0,0,-50}};  // TODO: get rid of hard-coded place
 	Camera camera = {};
-	PhysicsObject player = {vec3{0,50,0}};
+	PhysicsObject player = {vec3{0,map.get_height(0, 0),0}};
 
 	int zdir = 0;
 	int angledir = 0;
@@ -34,23 +36,19 @@ int main(int argc, char **argv)
 	double last_time = counter_in_seconds();
 
 	while (1) {
-		double remaining_delta_time;
-		for (double delta_time = counter_in_seconds() - last_time; delta_time > 0; delta_time = remaining_delta_time) {
-			float dt = 0.02f;
-			remaining_delta_time = delta_time - dt;
-			if (remaining_delta_time < 0)
-				dt = static_cast<float>(delta_time);
+		for (double remaining = counter_in_seconds() - last_time; remaining > 0; remaining -= MIN_PHYSICS_STEP_SECONDS)
+		{
+			float dt = static_cast<float>(std::min(remaining, MIN_PHYSICS_STEP_SECONDS));
 
-			angle += 1.8f*dt*angledir;
+			angle += PLAYER_TURNING_SPEED*dt*angledir;
 			camera.cam2world = mat3::rotation_about_y(angle);
 			camera.world2cam = mat3::rotation_about_y(-angle);
-
 			player.update(map, dt);
-			camera.location = player.get_location() + vec3{0,5,0};
-
 			enemy.move_towards_player(camera.location, map, dt);
 		}
 		last_time = counter_in_seconds();
+
+		camera.location = player.get_location() + vec3{0,CAMERA_HEIGHT,0};
 
 		glClearColor(0, 0, 0, 0);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -88,6 +86,6 @@ int main(int argc, char **argv)
 				break;
 		}
 
-		player.set_extra_force(camera.cam2world * vec3{0, 0, 40.0f*zdir});
+		player.set_extra_force(camera.cam2world * vec3{0, 0, PLAYER_MOVING_FORCE*zdir});
 	}
 }

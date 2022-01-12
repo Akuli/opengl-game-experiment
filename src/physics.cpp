@@ -1,12 +1,13 @@
-#include "physics.hpp"
+#include "config.hpp"
 #include "log.hpp"
+#include "physics.hpp"
 
 void PhysicsObject::update(Map& map, float dt)
 {
 	float map_height = map.get_height(this->location.x, this->location.z);
 	vec3 normal = map.get_normal_vector(this->location.x, this->location.z);
 
-	vec3 force = {0, -20, 0};
+	vec3 force = {0, -GRAVITY, 0};
 
 	if (this->location.y < map_height) {
 		this->touching_ground = true;

@@ -3,17 +3,18 @@
 #include "log.hpp"
 #include "opengl_boilerplate.hpp"
 #include "camera.hpp"
+#include "config.hpp"
 
 // use glDeleteShader afterwards
 static GLuint create_shader(GLenum type, const std::string& source, const char *shadername)
 {
-	static constexpr float aspect_ratio = CAMERA_SCREEN_WIDTH / (float)CAMERA_SCREEN_HEIGHT;
+	static constexpr float aspect_ratio = WINDOW_WIDTH / (float)WINDOW_HEIGHT;
 
 	std::string marker = "BOILERPLATE_GOES_HERE";
 	std::string boilerplate =
 		"vec4 darkerAtDistance(in vec3 brightColor, in vec3 locationFromCamera)\n"
 		"{\n"
-		"    vec3 rgb = brightColor * exp(-0.0003*pow(30+length(locationFromCamera),2));\n"
+		"    vec3 rgb = brightColor * exp(-0.0003*pow(30 + 80/" + std::to_string(VIEW_RADIUS) + "*length(locationFromCamera),2));\n"
 		"    return vec4(rgb.x, rgb.y, rgb.z, 1);\n"
 		"}\n"
 		"\n"
@@ -108,7 +109,7 @@ OpenglBoilerplate::OpenglBoilerplate()
 
 	this->window = SDL_CreateWindow(
 		"title", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
-		CAMERA_SCREEN_WIDTH, CAMERA_SCREEN_HEIGHT,
+		WINDOW_WIDTH, WINDOW_HEIGHT,
 		SDL_WINDOW_OPENGL);
 	if (!this->window)
 		log_printf_abort("SDL_CreateWindow failed: %s", SDL_GetError());
@@ -137,7 +138,7 @@ OpenglBoilerplate::OpenglBoilerplate()
 	glGenVertexArrays(1, &vertarr);
 	glBindVertexArray(vertarr);
 
-	glViewport(0, 0, CAMERA_SCREEN_WIDTH, CAMERA_SCREEN_HEIGHT);
+	glViewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
 }
 
 OpenglBoilerplate::~OpenglBoilerplate()
