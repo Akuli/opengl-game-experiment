@@ -3,10 +3,6 @@
 
 #include "linalg.hpp"
 
-// surfaces can be smaller than this, but these are handy for array sizes
-#define CAMERA_SCREEN_WIDTH 800
-#define CAMERA_SCREEN_HEIGHT 600
-
 /*
 It's often handy to have the camera at (0,0,0) pointing to negative z direction.
 Coordinates like that are called "camera coordinates", and the usual coordinates

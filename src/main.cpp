@@ -1,12 +1,20 @@
 #include <GL/glew.h>
 #include <SDL2/SDL.h>
+#include <algorithm>
 #include <cstdlib>
 #include <ctime>
-#include "map.hpp"
 #include "camera.hpp"
-#include "linalg.hpp"
-#include "opengl_boilerplate.hpp"
+#include "config.hpp"
 #include "enemy.hpp"
+#include "linalg.hpp"
+#include "map.hpp"
+#include "opengl_boilerplate.hpp"
+#include "physics.hpp"
+
+static double counter_in_seconds()
+{
+	return SDL_GetPerformanceCounter() / static_cast<double>(SDL_GetPerformanceFrequency());
+}
 
 int main(int argc, char **argv)
 {
@@ -17,25 +25,30 @@ int main(int argc, char **argv)
 
 	OpenglBoilerplate boilerplate = {};
 	Map map = {};
-	Enemy enemy = {};
-	enemy.z = -50;
+	Enemy enemy = {vec3{0,0,-50}};  // TODO: get rid of hard-coded place
 	Camera camera = {};
+	PhysicsObject player = {vec3{0,map.get_height(0, 0),0}};
 
 	int zdir = 0;
 	int angledir = 0;
 	float angle = 0;
 
+	double last_time = counter_in_seconds();
+
 	while (1) {
-		// FIXME: turn amount should depend on fps
-		angle += 0.03f*angledir;
-		camera.cam2world = mat3::rotation_about_y(angle);
-		camera.world2cam = mat3::rotation_about_y(-angle);
+		for (double remaining = counter_in_seconds() - last_time; remaining > 0; remaining -= MIN_PHYSICS_STEP_SECONDS)
+		{
+			float dt = static_cast<float>(std::min(remaining, MIN_PHYSICS_STEP_SECONDS));
 
-		// FIXME: move amount should depend on fps
-		camera.location += camera.cam2world * vec3{0,0,0.3f*zdir};
-		camera.location.y = map.get_height(camera.location.x, camera.location.z) + 5;
+			angle += PLAYER_TURNING_SPEED*dt*angledir;
+			camera.cam2world = mat3::rotation_about_y(angle);
+			camera.world2cam = mat3::rotation_about_y(-angle);
+			player.update(map, dt);
+			enemy.move_towards_player(camera.location, map, dt);
+		}
+		last_time = counter_in_seconds();
 
-		enemy.move_towards_player(camera.location);
+		camera.location = player.get_location() + vec3{0,CAMERA_HEIGHT,0};
 
 		glClearColor(0, 0, 0, 0);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -72,5 +85,7 @@ int main(int argc, char **argv)
 			default:
 				break;
 		}
+
+		player.set_extra_force(camera.cam2world * vec3{0, 0, PLAYER_MOVING_FORCE*zdir});
 	}
 }

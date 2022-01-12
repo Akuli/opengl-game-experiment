@@ -10,6 +10,7 @@
 #include <utility>
 #include <vector>
 #include "camera.hpp"
+#include "config.hpp"
 #include "linalg.hpp"
 #include "log.hpp"
 #include "opengl_boilerplate.hpp"
@@ -291,20 +292,17 @@ void Map::render(const Camera& cam)
 		glGetUniformLocation(this->priv->shaderprogram, "world2cam"),
 		1, true, &cam.world2cam.rows[0][0]);
 
-	// If you change this, also change the shader in opengl_boilerplate.c
-	int r = 80;
-
-	int startxmin = get_section_start_coordinate(cam.location.x - r);
-	int startxmax = get_section_start_coordinate(cam.location.x + r);
-	int startzmin = get_section_start_coordinate(cam.location.z - r);
-	int startzmax = get_section_start_coordinate(cam.location.z + r);
+	int startxmin = get_section_start_coordinate(cam.location.x - VIEW_RADIUS);
+	int startxmax = get_section_start_coordinate(cam.location.x + VIEW_RADIUS);
+	int startzmin = get_section_start_coordinate(cam.location.z - VIEW_RADIUS);
+	int startzmax = get_section_start_coordinate(cam.location.z + VIEW_RADIUS);
 
 	// +1 because both ends inlusive
 	int nx = (startxmax - startxmin)/SECTION_SIZE + 1;
 	int nz = (startzmax - startzmin)/SECTION_SIZE + 1;
 	int nsections = nx*nz;
 
-	int maxsections = ((2*r)/SECTION_SIZE + 2)*((2*r)/SECTION_SIZE + 2);
+	int maxsections = ((2*VIEW_RADIUS)/SECTION_SIZE + 2)*((2*VIEW_RADIUS)/SECTION_SIZE + 2);
 	SDL_assert(nsections <= maxsections);
 
 	if (this->priv->vbo == 0) {

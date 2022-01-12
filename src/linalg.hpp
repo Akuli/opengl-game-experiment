@@ -2,6 +2,7 @@
 #define LINALG_H
 
 #include <array>
+#include <cmath>  // IWYU pragma: keep
 
 class vec2 {
 public:
@@ -20,6 +21,10 @@ public:
 	inline vec2& operator/=(float f) { *this = *this/f; return *this; }
 
 	inline float dot(vec2 other) const { return this->x*other.x + this->y*other.y; }
+	inline float length_squared() const { return this->dot(*this); }
+	inline float length() const { return std::sqrt(this->length_squared()); }  // slow
+	inline vec2 with_length(float new_length) const { return *this * (new_length/this->length()); }
+	inline vec2 projection_to(vec2 v) const { return v * (this->dot(v)/v.dot(v)); }
 };
 
 class vec3 {
@@ -38,8 +43,13 @@ public:
 	inline vec3& operator*=(float f) { *this = *this*f; return *this; }
 	inline vec3& operator/=(float f) { *this = *this/f; return *this; }
 
-	inline float dot(vec3 other) const { return this->x*other.x + this->y*other.y + this->z*other.z; }
 	inline vec3 cross(vec3 other) const { return vec3{ this->y*other.z - this->z*other.y, this->z*other.x - this->x*other.z, this->x*other.y - this->y*other.x }; }
+
+	inline float dot(vec3 other) const { return this->x*other.x + this->y*other.y + this->z*other.z; }
+	inline float length_squared() const { return this->dot(*this); }
+	inline float length() const { return std::sqrt(this->length_squared()); }  // slow
+	inline vec3 with_length(float new_length) const { return *this * (new_length/this->length()); }
+	inline vec3 projection_to(vec3 v) const { return v * (this->dot(v)/v.dot(v)); }
 };
 
 class vec4 {
@@ -59,6 +69,10 @@ public:
 	inline vec4& operator/=(float f) { *this = *this/f; return *this; }
 
 	inline float dot(vec4 other) const { return this->x*other.x + this->y*other.y + this->z*other.z + this->w*other.w; }
+	inline float length_squared() const { return this->dot(*this); }
+	inline float length() const { return std::sqrt(this->length_squared()); }  // slow
+	inline vec4 with_length(float new_length) const { return *this * (new_length/this->length()); }
+	inline vec4 projection_to(vec4 v) const { return v * (this->dot(v)/v.dot(v)); }
 };
 
 class mat2 {
