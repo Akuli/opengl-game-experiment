@@ -18,6 +18,7 @@ int main(int argc, char **argv)
 	OpenglBoilerplate boilerplate = {};
 	Map map = {};
 	Enemy enemy = {};
+	enemy.z = -50;
 	Camera camera = {};
 
 	int zdir = 0;
@@ -33,6 +34,8 @@ int main(int argc, char **argv)
 		// FIXME: move amount should depend on fps
 		camera.location += camera.cam2world * vec3{0,0,0.3f*zdir};
 		camera.location.y = map.get_height(camera.location.x, camera.location.z) + 5;
+
+		enemy.move_towards_player(camera.location);
 
 		glClearColor(0, 0, 0, 0);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);

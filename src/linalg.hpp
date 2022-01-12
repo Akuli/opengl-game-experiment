@@ -102,6 +102,9 @@ public:
 	static mat3 rotation_about_z(float angle);
 	float det() const;
 
+	// Resulting matrix is a rotation that maps (0,1,0) to a unit vector in direction of v.
+	static mat3 rotation_to_tilt_y_towards_vector(vec3 v);
+
 private:
 	inline vec3 column(int i) const { return vec3{this->rows[0][i], this->rows[1][i], this->rows[2][i]}; }
 };

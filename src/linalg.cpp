@@ -41,6 +41,15 @@ mat3 mat3::rotation_about_z(float angle)
 	};
 }
 
+mat3 mat3::rotation_to_tilt_y_towards_vector(vec3 v)
+{
+	// atan2 avoids problems with division by zero when v is vertical.
+	// This is slower than needs to be, because this can be done without trig funcs, but it works.
+	float angle_about_y = std::atan2(v.z, v.x);
+	float tilt_angle = std::acos(v.y / sqrtf(v.dot(v)));
+	return mat3::rotation_about_y(angle_about_y) * mat3::rotation_about_z(-tilt_angle) * mat3::rotation_about_y(-angle_about_y);
+}
+
 static void transpose(mat3& M)
 {
 	std::swap(M.rows[1][0], M.rows[0][1]);

@@ -273,23 +273,12 @@ float Map::get_height(float x, float z)
 		+ t*u*section->y_table[ix+1][iz+1];
 }
 
-mat3 Map::get_rotation_matrix(float x, float z)
+vec3 Map::get_normal_vector(float x, float z)
 {
-	// a bit of a hack, but works well enough
-	float h = 0.01f;
+	float h = 0.5f;  // Bigger value --> smoother but less accurate result
 	vec3 v = { 2*h, this->get_height(x+h,z) - this->get_height(x-h,z), 0 };
 	vec3 w = { 0, this->get_height(x,z+h) - this->get_height(x,z-h), 2*h };
-	vec3 normal = w.cross(v);
-
-	/*
-	Tilt away from y axis in the correct direction.
-	atan2 avoids problems with division by zero, when normal vector goes up.
-	Slightly slower than needs to be, because this can be done without trig funcs, but it works
-	*/
-	float angle_about_y = std::atan2(normal.z, normal.x);
-	float tilt_angle = std::acos(normal.y / sqrtf(normal.dot(normal)));
-
-	return mat3::rotation_about_y(angle_about_y) * mat3::rotation_about_z(-tilt_angle) * mat3::rotation_about_y(-angle_about_y);
+	return w.cross(v);
 }
 
 void Map::render(const Camera& cam)

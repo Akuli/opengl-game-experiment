@@ -58,16 +58,17 @@ void Enemy::render(const Camera& cam, Map& map) const
 {
 	glUseProgram(this->shaderprogram);
 
-	vec3 v = vec3{0,map.get_height(0, 0),0} - cam.location;
+	vec3 v = vec3{this->x, map.get_height(this->x, this->z), this->z} - cam.location;
 	glUniform3f(
 		glGetUniformLocation(this->shaderprogram, "addToLocation"),
 		v.x, v.y, v.z);
 	glUniformMatrix3fv(
 		glGetUniformLocation(this->shaderprogram, "world2cam"),
 		1, true, &cam.world2cam.rows[0][0]);
+	mat3 rotation = mat3::rotation_to_tilt_y_towards_vector(map.get_normal_vector(this->x, this->z));
 	glUniformMatrix3fv(
 		glGetUniformLocation(this->shaderprogram, "mapRotation"),
-		1, true, &map.get_rotation_matrix(0, 0).rows[0][0]);
+		1, true, &rotation.rows[0][0]);
 
 	glBindBuffer(GL_ARRAY_BUFFER, this->vbo);
 	glEnableVertexAttribArray(0);
@@ -76,6 +77,19 @@ void Enemy::render(const Camera& cam, Map& map) const
 	glDisableVertexAttribArray(0);
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	glUseProgram(0);
+}
+
+void Enemy::move_towards_player(vec3 player_location)
+{
+	vec3 offset = player_location - vec3{ this->x, 0, this->z };
+	offset.y = 0;
+	offset /= std::sqrt(offset.dot(offset));
+
+	// TODO: moving speed should depend on fps and slope
+	offset *= 0.1f;
+
+	this->x += offset.x;
+	this->z += offset.z;
 }
 
 Enemy::Enemy()
