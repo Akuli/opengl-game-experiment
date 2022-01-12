@@ -7,6 +7,7 @@
 #include <vector>
 #include "camera.hpp"
 #include "linalg.hpp"
+#include "log.hpp"
 #include "map.hpp"
 #include "opengl_boilerplate.hpp"
 
@@ -56,16 +57,27 @@ static const std::vector<std::array<vec4, 3>>& get_vertex_data()
 
 void Enemy::render(const Camera& cam, Map& map) const
 {
+	vec3 location = this->physics_object.get_location();
+
+	vec3 normal_vector = map.get_normal_vector(location.x, location.z);
+	float above_floor = location.y - map.get_height(location.x, location.z);
+	if (above_floor > 0) {
+		// When the enemy is flying, don't follow ground shapes much
+		normal_vector.y += -1 + std::exp(above_floor);
+	}
+
 	glUseProgram(this->shaderprogram);
 
-	vec3 v = vec3{this->x, map.get_height(this->x, this->z), this->z} - cam.location;
+	vec3 relative_location = location - cam.location;
 	glUniform3f(
 		glGetUniformLocation(this->shaderprogram, "addToLocation"),
-		v.x, v.y, v.z);
+		relative_location.x, relative_location.y, relative_location.z);
+
 	glUniformMatrix3fv(
 		glGetUniformLocation(this->shaderprogram, "world2cam"),
 		1, true, &cam.world2cam.rows[0][0]);
-	mat3 rotation = mat3::rotation_to_tilt_y_towards_vector(map.get_normal_vector(this->x, this->z));
+
+	mat3 rotation = mat3::rotation_to_tilt_y_towards_vector(normal_vector);
 	glUniformMatrix3fv(
 		glGetUniformLocation(this->shaderprogram, "mapRotation"),
 		1, true, &rotation.rows[0][0]);
@@ -79,20 +91,15 @@ void Enemy::render(const Camera& cam, Map& map) const
 	glUseProgram(0);
 }
 
-void Enemy::move_towards_player(vec3 player_location)
+void Enemy::move_towards_player(vec3 player_location, Map& map, float dt)
 {
-	vec3 offset = player_location - vec3{ this->x, 0, this->z };
-	offset.y = 0;
-	offset /= std::sqrt(offset.dot(offset));
-
-	// TODO: moving speed should depend on fps and slope
-	offset *= 0.1f;
-
-	this->x += offset.x;
-	this->z += offset.z;
+	vec3 force = player_location - this->physics_object.get_location();
+	force.y = 0;
+	this->physics_object.set_extra_force(force.with_length(30));
+	this->physics_object.update(map, dt);
 }
 
-Enemy::Enemy()
+Enemy::Enemy(vec3 initial_location) : physics_object{PhysicsObject(initial_location)}
 {
 	std::string vertex_shader =
 		"#version 330\n"

@@ -2,11 +2,17 @@
 #include <SDL2/SDL.h>
 #include <cstdlib>
 #include <ctime>
-#include "map.hpp"
 #include "camera.hpp"
-#include "linalg.hpp"
-#include "opengl_boilerplate.hpp"
 #include "enemy.hpp"
+#include "linalg.hpp"
+#include "log.hpp"
+#include "map.hpp"
+#include "opengl_boilerplate.hpp"
+
+static double counter_in_seconds()
+{
+	return SDL_GetPerformanceCounter() / static_cast<double>(SDL_GetPerformanceFrequency());
+}
 
 int main(int argc, char **argv)
 {
@@ -17,25 +23,34 @@ int main(int argc, char **argv)
 
 	OpenglBoilerplate boilerplate = {};
 	Map map = {};
-	Enemy enemy = {};
-	enemy.z = -50;
+	Enemy enemy = {vec3{0,0,-50}};
 	Camera camera = {};
+	PhysicsObject player = {vec3{0,50,0}};
 
 	int zdir = 0;
 	int angledir = 0;
 	float angle = 0;
 
+	double last_time = counter_in_seconds();
+
 	while (1) {
-		// FIXME: turn amount should depend on fps
-		angle += 0.03f*angledir;
-		camera.cam2world = mat3::rotation_about_y(angle);
-		camera.world2cam = mat3::rotation_about_y(-angle);
+		double remaining_delta_time;
+		for (double delta_time = counter_in_seconds() - last_time; delta_time > 0; delta_time = remaining_delta_time) {
+			float dt = 0.02f;
+			remaining_delta_time = delta_time - dt;
+			if (remaining_delta_time < 0)
+				dt = static_cast<float>(delta_time);
 
-		// FIXME: move amount should depend on fps
-		camera.location += camera.cam2world * vec3{0,0,0.3f*zdir};
-		camera.location.y = map.get_height(camera.location.x, camera.location.z) + 5;
+			angle += 1.8f*dt*angledir;
+			camera.cam2world = mat3::rotation_about_y(angle);
+			camera.world2cam = mat3::rotation_about_y(-angle);
 
-		enemy.move_towards_player(camera.location);
+			player.update(map, dt);
+			camera.location = player.get_location() + vec3{0,5,0};
+
+			enemy.move_towards_player(camera.location, map, dt);
+		}
+		last_time = counter_in_seconds();
 
 		glClearColor(0, 0, 0, 0);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -72,5 +87,7 @@ int main(int argc, char **argv)
 			default:
 				break;
 		}
+
+		player.set_extra_force(camera.cam2world * vec3{0, 0, 40.0f*zdir});
 	}
 }
