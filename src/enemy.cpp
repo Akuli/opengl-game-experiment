@@ -60,12 +60,6 @@ static void initialize_rendering(GLuint& shader_program_out, GLuint& vbo_out, in
 	static int triangle_count = -1;
 
 	if (triangle_count == -1) {
-		/*
-		Clean up code, in case this is changed at some point:
-
-		glDeleteProgram(shaderprogram);
-		glDeleteBuffers(1, &vbo);
-		*/
 		std::string vertex_shader =
 			"#version 330\n"
 			"\n"
