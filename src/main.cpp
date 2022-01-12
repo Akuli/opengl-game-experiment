@@ -65,7 +65,7 @@ int main(int argc, char **argv)
 	int zdir = 0;
 	int angledir = 0;
 
-	double last_time = counter_in_seconds() - 1e-5;  // Make sure at least one physics iteration runs below
+	double last_time = counter_in_seconds();
 
 	while (1) {
 		for (double rem = counter_in_seconds() - last_time; rem > 0; rem -= MIN_PHYSICS_STEP_SECONDS)
