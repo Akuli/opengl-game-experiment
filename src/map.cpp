@@ -372,6 +372,8 @@ Map::~Map()
 }
 
 
+// FIXME: enemies aren't switched to the correct section when they move --> not always shown when should
+// FIXME: code = mess
 std::vector<Enemy*> SectionedStorage::find_within_circle(float center_x, float center_z, float radius) const {
 	std::vector<Enemy*> result = {};
 	int startx_min = get_section_start_coordinate(center_x - radius);
@@ -386,6 +388,7 @@ std::vector<Enemy*> SectionedStorage::find_within_circle(float center_x, float c
 			if (find_result == this->objects.end())
 				continue;
 
+			// TODO: filter results?
 			const std::vector<Enemy>& values = find_result->second;
 			for (int i = 0; i < values.size(); i++)
 				result.push_back(const_cast<Enemy*>(values.data() + i));
