@@ -10,6 +10,7 @@ class Enemy {
 public:
 	Enemy(vec3 initial_location);
 	Enemy(const Enemy&) = delete;
+	Enemy(Enemy&&) = default;
 
 	void render(const Camera& camera, Map& map) const;
 	void move_towards_player(vec3 player_location, Map& map, float dt);
