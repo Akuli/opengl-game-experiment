@@ -18,12 +18,17 @@ static double counter_in_seconds()
 	return SDL_GetPerformanceCounter() / static_cast<double>(SDL_GetPerformanceFrequency());
 }
 
+// i hate this, it's just total ass shit
+struct EnemyLocator {
+	vec3 operator()(const Enemy& e) { return e.get_location(); }
+};
+
 struct GameState {
 	Map map;
 	PhysicsObject player = PhysicsObject(vec3{0, map.get_height(0,0), 0});
 	Camera camera;
 	float camera_angle;
-	std::vector<Enemy> enemies;
+	SectionedStorage<Enemy, EnemyLocator> enemies;
 
 	GameState(const GameState &) = delete;
 
@@ -35,7 +40,7 @@ struct GameState {
 		log_printf("There are %d enemies, adding one more", (int)this->enemies.size());
 		float x, z;
 		Enemy::decide_location(this->player.get_location(), x, z);
-		this->enemies.push_back(Enemy(vec3{ x, this->map.get_height(x, z), z }));
+		this->enemies.add_object(Enemy(vec3{ x, this->map.get_height(x, z), z }));
 		this->next_enemy_time += ENEMY_DELAY;
 	}
 
@@ -45,7 +50,7 @@ struct GameState {
 		this->camera.world2cam = mat3::rotation_about_y(-this->camera_angle);
 
 		this->player.update(this->map, dt);
-		for (Enemy& e : this->enemies) {
+		for (Enemy& e : this->enemies.find_within_circle(this->player.get_location().x, this->player.get_location().z, 2*VIEW_RADIUS)) {
 			e.move_towards_player(this->camera.location, this->map, dt);
 		}
 	}
@@ -81,8 +86,10 @@ int main(int argc, char **argv)
 		glClearColor(0, 0, 0, 0);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		game_state.map.render(game_state.camera);
-		for (const Enemy& e : game_state.enemies)
+		for (const Enemy& e : game_state.enemies.find_within_circle(game_state.player.get_location().x, game_state.player.get_location().z, VIEW_RADIUS))
+		{
 			e.render(game_state.camera, game_state.map);
+		}
 		SDL_GL_SwapWindow(boilerplate.window);
 
 		SDL_Event e;

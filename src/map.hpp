@@ -40,7 +40,7 @@ public:
 				if (find_result == this->objects.end())
 					continue;
 
-				const std::vector<T>& values = find_result->second.get();
+				const std::vector<T>& values = find_result->second;
 				for (const T& value : values)
 					result.push_back(std::reference_wrapper<T>(value));
 			}
@@ -48,7 +48,22 @@ public:
 		return result;
 	}
 
+	void add_object(T&& object) {
+		using MapPrivate::get_section_start_coordinate;
+		int startx = get_section_start_coordinate(GetLocation{}(object).x);
+		int startz = get_section_start_coordinate(GetLocation{}(object).z);
+		std::pair<int,int> key = { startx, startz };
+
+		if (this->objects.find(key) == this->objects.end())
+			this->objects[key] = std::vector<T>{};
+		this->objects[key].push_back(object);
+		this->count++;
+	}
+
+	int size() const { return this->count; }
+
 private:
+	int count;
 	std::unordered_map<std::pair<int, int>, std::vector<T>, MapPrivate::IntPairHasher> objects;
 };
 
