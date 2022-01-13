@@ -149,16 +149,14 @@ static int section_preparing_thread(void *queueptr)
 
 // pairs aren't hashable :(
 // https://stackoverflow.com/a/32685618
-struct IntPairHasher {
-	size_t operator() (const std::pair<int,int> &pair) const {
-		size_t h1 = std::hash<int>{}(pair.first);
-		size_t h2 = std::hash<int>{}(pair.second);
-		// both magic numbers are primes, to prevent patterns that place many numbers similarly
-		return (h1*7907u) ^ (h2*4391u);
-	}
-};
+size_t MapPrivate::IntPairHasher::operator()(const std::pair<int,int>& pair) const {
+	size_t h1 = std::hash<int>{}(pair.first);
+	size_t h2 = std::hash<int>{}(pair.second);
+	// both magic numbers are primes, to prevent patterns that place many numbers similarly
+	return (h1*7907u) ^ (h2*4391u);
+}
 
-struct MapPrivate {
+struct MapPrivate::MapData {
 	std::unordered_map<std::pair<int, int>, std::unique_ptr<Section>, IntPairHasher> sections;
 
 	SectionQueue queue;
@@ -168,7 +166,7 @@ struct MapPrivate {
 	GLuint vbo;  // Vertex Buffer Object, represents triangles going to gpu
 };
 
-static Section *find_or_add_section(MapPrivate& map, int startx, int startz)
+static Section *find_or_add_section(MapPrivate::MapData& map, int startx, int startz)
 {
 	std::pair<int, int> key = { startx, startz };
 
@@ -199,7 +197,7 @@ static Section *find_or_add_section(MapPrivate& map, int startx, int startz)
 	return &*map.sections[key];
 }
 
-static void ensure_y_table_is_ready(MapPrivate& map, int startx, int startz)
+static void ensure_y_table_is_ready(MapPrivate::MapData& map, int startx, int startz)
 {
 	SDL_assert(map.sections.find(std::make_pair(startx, startz)) != map.sections.end());
 	Section *section = map.sections[std::make_pair(startx, startz)].get();
@@ -331,7 +329,7 @@ void Map::render(const Camera& cam)
 
 Map::Map()
 {
-	this->priv = std::make_unique<MapPrivate>();
+	this->priv = std::make_unique<MapPrivate::MapData>();
 	this->priv->queue.lock = SDL_CreateMutex();
 	SDL_assert(this->priv->queue.lock);
 
