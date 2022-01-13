@@ -13,6 +13,7 @@
 #include "config.hpp"
 #include "linalg.hpp"
 #include "log.hpp"
+#include "misc.hpp"
 #include "opengl_boilerplate.hpp"
 
 static constexpr int SECTION_SIZE = 40;  // side length of section square on xz plane
@@ -49,12 +50,6 @@ struct Section {
 	Section() = default;
 	Section(const Section&) = delete;
 };
-
-static float uniform_random_float(float min, float max)
-{
-	// I tried writing this in "modern C++" style but that was more complicated
-	return lerp(min, max, std::rand() / (float)RAND_MAX);
-}
 
 static void generate_section(Section& section)
 {
@@ -138,7 +133,7 @@ static int section_preparing_thread(void *queueptr)
 			continue;
 		}
 
-		log_printf("There is room in section queue (%d/%d), generating a new section", len, maxlen);
+		//log_printf("There is room in section queue (%d/%d), generating a new section", len, maxlen);
 		std::unique_ptr<Section> tmp = std::make_unique<Section>();
 		generate_section(*tmp);  // slow
 
