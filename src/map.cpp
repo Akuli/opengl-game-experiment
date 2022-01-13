@@ -14,6 +14,7 @@
 #include "linalg.hpp"
 #include "log.hpp"
 #include "misc.hpp"
+#include "enemy.hpp"
 #include "opengl_boilerplate.hpp"
 
 static constexpr int SECTION_SIZE = 40;  // side length of section square on xz plane
@@ -369,3 +370,38 @@ Map::~Map()
 	SDL_WaitThread(this->priv->prepthread, nullptr);
 	SDL_DestroyMutex(this->priv->queue.lock);
 }
+
+
+std::vector<Enemy*> SectionedStorage::find_within_circle(float center_x, float center_z, float radius) const {
+	std::vector<Enemy*> result = {};
+	int startx_min = get_section_start_coordinate(center_x - radius);
+	int startx_max = get_section_start_coordinate(center_x + radius);
+	int startz_min = get_section_start_coordinate(center_z - radius);
+	int startz_max = get_section_start_coordinate(center_z + radius);
+
+	for (int startx = startx_min; startx <= startx_max; startx += SECTION_SIZE) {
+		for (int startz = startz_min; startz <= startz_max; startz += SECTION_SIZE) {
+			// TODO: skip if section entirely outside circle
+			auto find_result = this->objects.find(std::make_pair(startx, startz));
+			if (find_result == this->objects.end())
+				continue;
+
+			const std::vector<Enemy>& values = find_result->second;
+			for (int i = 0; i < values.size(); i++)
+				result.push_back(const_cast<Enemy*>(values.data() + i));
+		}
+	}
+	return result;
+}
+
+void SectionedStorage::add_object(Enemy&& object) {
+	int startx = get_section_start_coordinate(object.get_location().x);
+	int startz = get_section_start_coordinate(object.get_location().z);
+	std::pair<int,int> key = { startx, startz };
+
+	if (this->objects.find(key) == this->objects.end())
+		this->objects[key] = std::vector<Enemy>{};
+	this->objects[key].push_back(std::move(object));
+	this->count++;
+}
+
