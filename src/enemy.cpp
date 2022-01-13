@@ -155,18 +155,9 @@ Enemy::Enemy(vec3 initial_location) : physics_object{PhysicsObject(initial_locat
 
 void Enemy::decide_location(vec3 player_location, float& x, float& z)
 {
-	static_assert(ENEMY_PLAYER_INITIAL_MAX_DISTANCE > VIEW_RADIUS);
-	float relative_x, relative_z, distance;
-	do {
-		relative_x = uniform_random_float(
-			-ENEMY_PLAYER_INITIAL_MAX_DISTANCE,
-			ENEMY_PLAYER_INITIAL_MAX_DISTANCE);
-		relative_z = uniform_random_float(
-			-ENEMY_PLAYER_INITIAL_MAX_DISTANCE,
-			ENEMY_PLAYER_INITIAL_MAX_DISTANCE);
-		distance = std::hypot(relative_x, relative_z);
-	} while (!(VIEW_RADIUS < distance && distance < ENEMY_PLAYER_INITIAL_MAX_DISTANCE));
+	float pi = std::acos(-1.0f);
+	float angle = uniform_random_float(0, 2*pi);
 
-	x = player_location.x + relative_x;
-	z = player_location.z + relative_z;
+	x = player_location.x + VIEW_RADIUS*std::cos(angle);
+	z = player_location.z + VIEW_RADIUS*std::sin(angle);
 }
