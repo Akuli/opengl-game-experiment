@@ -25,6 +25,11 @@ struct GaussianCurveMountain {
 };
 
 struct Section {
+	Section() = default;
+	Section(const Section&) = delete;
+
+	std::vector<Enemy> enemies;
+
 	/*
 	y = yscale*e^(-(((x - centerx) / xzscale)^2 + ((z - centerz) / xzscale)^2))
 	yscale can be negative, xzscale can't
@@ -47,9 +52,6 @@ struct Section {
 	std::array<std::array<float, SECTION_SIZE + 1>, SECTION_SIZE + 1> y_table;
 	std::array<std::array<vec3, 3>, TRIANGLES_PER_SECTION> vertexdata;
 	bool y_table_and_vertexdata_ready;
-
-	Section() = default;
-	Section(const Section&) = delete;
 };
 
 static void generate_section(Section& section)
@@ -150,14 +152,16 @@ static int section_preparing_thread(void *queueptr)
 
 // pairs aren't hashable :(
 // https://stackoverflow.com/a/32685618
-size_t MapPrivate::IntPairHasher::operator()(const std::pair<int,int>& pair) const {
-	size_t h1 = std::hash<int>{}(pair.first);
-	size_t h2 = std::hash<int>{}(pair.second);
-	// both magic numbers are primes, to prevent patterns that place many numbers similarly
-	return (h1*7907u) ^ (h2*4391u);
-}
+struct IntPairHasher {
+	size_t operator()(const std::pair<int,int>& pair) const {
+		size_t h1 = std::hash<int>{}(pair.first);
+		size_t h2 = std::hash<int>{}(pair.second);
+		// both magic numbers are primes, to prevent patterns that place many numbers similarly
+		return (h1*7907u) ^ (h2*4391u);
+	}
+};
 
-struct MapPrivate::MapData {
+struct MapPrivate {
 	std::unordered_map<std::pair<int, int>, std::unique_ptr<Section>, IntPairHasher> sections;
 
 	SectionQueue queue;
@@ -167,7 +171,7 @@ struct MapPrivate::MapData {
 	GLuint vbo;  // Vertex Buffer Object, represents triangles going to gpu
 };
 
-static Section *find_or_add_section(MapPrivate::MapData& map, int startx, int startz)
+static Section *find_or_add_section(MapPrivate& map, int startx, int startz)
 {
 	std::pair<int, int> key = { startx, startz };
 
@@ -198,7 +202,7 @@ static Section *find_or_add_section(MapPrivate::MapData& map, int startx, int st
 	return &*map.sections[key];
 }
 
-static void ensure_y_table_is_ready(MapPrivate::MapData& map, int startx, int startz)
+static void ensure_y_table_is_ready(MapPrivate& map, int startx, int startz)
 {
 	SDL_assert(map.sections.find(std::make_pair(startx, startz)) != map.sections.end());
 	Section *section = map.sections[std::make_pair(startx, startz)].get();
@@ -330,7 +334,7 @@ void Map::render(const Camera& cam)
 
 Map::Map()
 {
-	this->priv = std::make_unique<MapPrivate::MapData>();
+	this->priv = std::make_unique<MapPrivate>();
 	this->priv->queue.lock = SDL_CreateMutex();
 	SDL_assert(this->priv->queue.lock);
 
@@ -372,9 +376,22 @@ Map::~Map()
 }
 
 
+void Map::add_enemy(Enemy&& enemy) {
+	int startx = get_section_start_coordinate(enemy.get_location().x);
+	int startz = get_section_start_coordinate(enemy.get_location().z);
+	Section *section = find_or_add_section(*this->priv, startx, startz);
+	section->enemies.push_back(std::move(enemy));
+}
+
+int Map::get_number_of_enemies() const {
+	int result = 0;
+	for (const auto& item : this->priv->sections)
+		result += item.second->enemies.size();
+	return result;
+}
+
 // FIXME: enemies aren't switched to the correct section when they move --> not always shown when should
-// FIXME: code = mess
-std::vector<Enemy*> SectionedStorage::find_within_circle(float center_x, float center_z, float radius) const {
+std::vector<Enemy*> Map::find_enemies_within_circle(float center_x, float center_z, float radius) const {
 	std::vector<Enemy*> result = {};
 	int startx_min = get_section_start_coordinate(center_x - radius);
 	int startx_max = get_section_start_coordinate(center_x + radius);
@@ -383,28 +400,17 @@ std::vector<Enemy*> SectionedStorage::find_within_circle(float center_x, float c
 
 	for (int startx = startx_min; startx <= startx_max; startx += SECTION_SIZE) {
 		for (int startz = startz_min; startz <= startz_max; startz += SECTION_SIZE) {
-			// TODO: skip if section entirely outside circle
-			auto find_result = this->objects.find(std::make_pair(startx, startz));
-			if (find_result == this->objects.end())
+			// TODO: skip if the entire section is outside circle
+			auto find_result = this->priv->sections.find(std::make_pair(startx, startz));
+			if (find_result == this->priv->sections.end())
 				continue;
 
-			// TODO: filter results?
-			const std::vector<Enemy>& values = find_result->second;
-			for (int i = 0; i < values.size(); i++)
-				result.push_back(const_cast<Enemy*>(values.data() + i));
+			Section *section = find_result->second.get();
+			for (int i = 0; i < section->enemies.size(); i++) {
+				// TODO: filter results?
+				result.push_back(&section->enemies.data()[i]);
+			}
 		}
 	}
 	return result;
 }
-
-void SectionedStorage::add_object(Enemy&& object) {
-	int startx = get_section_start_coordinate(object.get_location().x);
-	int startz = get_section_start_coordinate(object.get_location().z);
-	std::pair<int,int> key = { startx, startz };
-
-	if (this->objects.find(key) == this->objects.end())
-		this->objects[key] = std::vector<Enemy>{};
-	this->objects[key].push_back(std::move(object));
-	this->count++;
-}
-

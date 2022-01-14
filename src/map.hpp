@@ -8,32 +8,9 @@
 #include <vector>
 #include <unordered_map>
 
-namespace MapPrivate {
-	struct IntPairHasher { size_t operator() (const std::pair<int,int> &pair) const; };
-	extern const int section_size;
-
-	// not gonna shit all over my h++ file with private structs and methods, sorry
-	struct MapData;
-}
-
-
-// Partitions the world into sections to make finding nearby objects easier
 class Enemy;  // FIXME: project structure = shit
-class SectionedStorage
-{
-public:
-	// TODO: don't return a vector, some kind of iterator instead?
-	std::vector<Enemy*> find_within_circle(float center_x, float center_z, float radius) const;
-	void add_object(Enemy&& object);
 
-	int size() const { return this->count; }
-
-private:
-	int count;
-	std::unordered_map<std::pair<int, int>, std::vector<Enemy>, MapPrivate::IntPairHasher> objects;
-};
-
-
+struct MapPrivate;  // don't want to shit private stuff all over header file
 class Map {
 public:
 	Map();
@@ -46,8 +23,13 @@ public:
 	vec3 get_normal_vector(float x, float z);  // arbitrary length, points away from surface
 	void render(const Camera& camera);
 
+	void add_enemy(Enemy&& enemy);
+	int get_number_of_enemies() const;
+	// TODO: don't return a vector, some kind of iterator instead?
+	std::vector<Enemy*> find_enemies_within_circle(float center_x, float center_z, float radius) const;
+
 private:
-	std::unique_ptr<MapPrivate::MapData> priv;
+	std::unique_ptr<MapPrivate> priv;
 };
 
 #endif
