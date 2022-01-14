@@ -441,13 +441,8 @@ void Map::move_enemies(vec3 player_location, float dt)
 			if (startx != las.startx || startz != las.startz) {
 				log_printf("Enemy moves to different section");
 				moved.push_back(std::move(enemies[i]));
-
-				// FIXME: do not use memcpy(), instead figure out why c++ hated me
-				char tmp[sizeof(enemies[0])];
-				memcpy(tmp, &enemies[i], sizeof tmp);
-				memcpy(&enemies[i], &enemies[enemies.size()-1], sizeof tmp);
-				memcpy(&enemies[enemies.size()-1], tmp, sizeof tmp);
-
+				if (i != enemies.size()-1)
+					enemies[i] = std::move(enemies[enemies.size()-1]);
 				enemies.pop_back();
 			}
 		}

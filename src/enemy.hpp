@@ -10,7 +10,9 @@ class Enemy {
 public:
 	Enemy(vec3 initial_location);
 	Enemy(const Enemy&) = delete;
+	Enemy& operator=(Enemy const &) = delete;
 	Enemy(Enemy&&) = default;
+	Enemy& operator=(Enemy &&) = default;
 
 	vec3 get_location() const { return this->physics_object.get_location(); }
 	void render(const Camera& camera, Map& map) const;
