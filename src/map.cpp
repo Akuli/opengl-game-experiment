@@ -376,11 +376,11 @@ Map::~Map()
 }
 
 
-void Map::add_enemy(Enemy&& enemy) {
+void Map::add_enemy(const Enemy& enemy) {
 	int startx = get_section_start_coordinate(enemy.get_location().x);
 	int startz = get_section_start_coordinate(enemy.get_location().z);
 	Section *section = find_or_add_section(*this->priv, startx, startz);
-	section->enemies.push_back(std::move(enemy));
+	section->enemies.push_back(enemy);
 }
 
 int Map::get_number_of_enemies() const {
@@ -440,21 +440,18 @@ void Map::move_enemies(vec3 player_location, float dt)
 			int startz = get_section_start_coordinate(enemies[i].get_location().z);
 			if (startx != las.startx || startz != las.startz) {
 				log_printf("Enemy moves to different section");
-				moved.push_back(std::move(enemies[i]));
 				if (i != enemies.size()-1)
-					enemies[i] = std::move(enemies[enemies.size()-1]);
+					std::swap(enemies[i], enemies[enemies.size()-1]);
+				moved.push_back(enemies[enemies.size()-1]);
 				enemies.pop_back();
 			}
 		}
 	}
 
-	while (!moved.empty()) {
-		Enemy e = std::move(moved[moved.size() - 1]);
-		moved.pop_back();
-
+	for (const Enemy& e : moved) {
 		int startx = get_section_start_coordinate(e.get_location().x);
 		int startz = get_section_start_coordinate(e.get_location().z);
 		Section* section = find_or_add_section(*this->priv, startx, startz);
-		section->enemies.push_back(std::move(e));
+		section->enemies.push_back(e);
 	}
 }

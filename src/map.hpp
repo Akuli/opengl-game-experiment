@@ -23,7 +23,7 @@ public:
 	vec3 get_normal_vector(float x, float z);  // arbitrary length, points away from surface
 	void render(const Camera& camera);
 
-	void add_enemy(Enemy&& enemy);
+	void add_enemy(const Enemy&);
 	void move_enemies(vec3 player_location, float dt);
 	int get_number_of_enemies() const;
 	// TODO: don't return a vector, some kind of iterator instead?
