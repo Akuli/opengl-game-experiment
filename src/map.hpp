@@ -24,9 +24,10 @@ public:
 	void render(const Camera& camera);
 
 	void add_enemy(Enemy&& enemy);
+	void move_enemies(vec3 player_location, float dt);
 	int get_number_of_enemies() const;
 	// TODO: don't return a vector, some kind of iterator instead?
-	std::vector<Enemy*> find_enemies_within_circle(float center_x, float center_z, float radius) const;
+	std::vector<const Enemy*> find_enemies_within_circle(float center_x, float center_z, float radius) const;
 
 private:
 	std::unique_ptr<MapPrivate> priv;

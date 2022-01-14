@@ -44,9 +44,7 @@ struct GameState {
 		this->camera.world2cam = mat3::rotation_about_y(-this->camera_angle);
 
 		this->player.update(this->map, dt);
-		for (Enemy* e : this->map.find_enemies_within_circle(this->player.get_location().x, this->player.get_location().z, 2*VIEW_RADIUS)) {
-			e->move_towards_player(this->camera.location, this->map, dt);
-		}
+		this->map.move_enemies(this->camera.location, dt);
 	}
 };
 

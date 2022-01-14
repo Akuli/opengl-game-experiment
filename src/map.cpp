@@ -390,9 +390,13 @@ int Map::get_number_of_enemies() const {
 	return result;
 }
 
-// FIXME: enemies aren't switched to the correct section when they move --> not always shown when should
-std::vector<Enemy*> Map::find_enemies_within_circle(float center_x, float center_z, float radius) const {
-	std::vector<Enemy*> result = {};
+struct LocationAndSection {
+	int startx, startz;
+	Section* section;
+};
+
+static std::vector<LocationAndSection> find_sections_within_circle(const MapPrivate& map, float center_x, float center_z, float radius) {
+	std::vector<LocationAndSection> result = {};
 	int startx_min = get_section_start_coordinate(center_x - radius);
 	int startx_max = get_section_start_coordinate(center_x + radius);
 	int startz_min = get_section_start_coordinate(center_z - radius);
@@ -401,16 +405,61 @@ std::vector<Enemy*> Map::find_enemies_within_circle(float center_x, float center
 	for (int startx = startx_min; startx <= startx_max; startx += SECTION_SIZE) {
 		for (int startz = startz_min; startz <= startz_max; startz += SECTION_SIZE) {
 			// TODO: skip if the entire section is outside circle
-			auto find_result = this->priv->sections.find(std::make_pair(startx, startz));
-			if (find_result == this->priv->sections.end())
-				continue;
-
-			Section *section = find_result->second.get();
-			for (int i = 0; i < section->enemies.size(); i++) {
-				// TODO: filter results?
-				result.push_back(&section->enemies.data()[i]);
+			auto find_result = map.sections.find(std::make_pair(startx, startz));
+			if (find_result != map.sections.end()) {
+				result.push_back({ startx, startz, find_result->second.get() });
 			}
 		}
 	}
 	return result;
+}
+
+std::vector<const Enemy*> Map::find_enemies_within_circle(float center_x, float center_z, float radius) const
+{
+	std::vector<const Enemy*> result = {};
+	for (LocationAndSection las : find_sections_within_circle(*this->priv, center_x, center_z, radius)) {
+		for (int i = 0; i < las.section->enemies.size(); i++) {
+			// TODO: filter
+			result.push_back(&las.section->enemies.data()[i]);
+		}
+	}
+	return result;
+}
+
+void Map::move_enemies(vec3 player_location, float dt)
+{
+	std::vector<Enemy> moved = {};
+
+	for (LocationAndSection las : find_sections_within_circle(*this->priv, player_location.x, player_location.z, 2*VIEW_RADIUS)) {
+		std::vector<Enemy>& enemies = las.section->enemies;
+
+		for (int i = enemies.size() - 1; i >= 0; i--) {
+			enemies[i].move_towards_player(player_location, *this, dt);
+
+			int startx = get_section_start_coordinate(enemies[i].get_location().x);
+			int startz = get_section_start_coordinate(enemies[i].get_location().z);
+			if (startx != las.startx || startz != las.startz) {
+				log_printf("Enemy moves to different section");
+				moved.push_back(std::move(enemies[i]));
+
+				// FIXME: do not use memcpy(), instead figure out why c++ hated me
+				char tmp[sizeof(enemies[0])];
+				memcpy(tmp, &enemies[i], sizeof tmp);
+				memcpy(&enemies[i], &enemies[enemies.size()-1], sizeof tmp);
+				memcpy(&enemies[enemies.size()-1], tmp, sizeof tmp);
+
+				enemies.pop_back();
+			}
+		}
+	}
+
+	while (!moved.empty()) {
+		Enemy e = std::move(moved[moved.size() - 1]);
+		moved.pop_back();
+
+		int startx = get_section_start_coordinate(e.get_location().x);
+		int startz = get_section_start_coordinate(e.get_location().z);
+		Section* section = find_or_add_section(*this->priv, startx, startz);
+		section->enemies.push_back(std::move(e));
+	}
 }
