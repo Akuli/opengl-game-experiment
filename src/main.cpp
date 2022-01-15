@@ -23,19 +23,30 @@ struct GameState {
 	PhysicsObject player = PhysicsObject(vec3{0, map.get_height(0,0), 0});
 	Camera camera;
 	float camera_angle;
+	double start_time = counter_in_seconds();
+	double next_enemy_time = counter_in_seconds();
 
 	GameState(const GameState &) = delete;
 
-	double next_enemy_time = counter_in_seconds() + ENEMY_DELAY;
 	void add_enemy_if_needed() {
 		if (counter_in_seconds() < this->next_enemy_time)
 			return;
 
-		log_printf("There are %d enemies, adding one more", (int)this->map.get_number_of_enemies());
 		float x, z;
 		Enemy::decide_location(this->player.get_location(), x, z);
 		this->map.add_enemy(Enemy(vec3{ x, this->map.get_height(x, z), z }));
-		this->next_enemy_time += ENEMY_DELAY;
+
+		/*
+		Later in the game, produce enemies more quickly.
+		DO NOT use something like "enemy_delay *= 0.99" because that will result in
+		an exponentially small enemy delay, i.e. too many enemies.
+		*/
+		double time_passed = counter_in_seconds() - this->start_time;
+		double enemy_delay = 60/(60 + time_passed);
+		this->next_enemy_time += enemy_delay;
+
+		log_printf("Added an enemy, now there are %d enemies and next adding will happen after %.2fsec",
+			(int)this->map.get_number_of_enemies(), enemy_delay);
 	}
 
 	void update_physics(float dt, int camera_angle_direction) {
