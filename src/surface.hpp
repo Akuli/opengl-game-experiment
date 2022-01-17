@@ -8,7 +8,6 @@
 
 class Surface {
 public:
-	Surface() = default;
 	Surface(
 		std::function<vec4(float, float)> tu_to_3d_point_and_brightness,
 		float tmin, float tmax, int tstepcount,

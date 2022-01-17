@@ -21,18 +21,11 @@ static vec4 tu_to_3d_point_and_brightness(float t, float u)
 
 void Player::render(const Camera& camera, Map& map) const
 {
-	static Surface surface;
-	bool surface_ready = false;
-
-	if (!surface_ready) {
-		float pi = std::acos(-1.0f);
-		surface = Surface(tu_to_3d_point_and_brightness,
-			0, 2*pi, 50,
-			0, 2*pi, 50,
-			1.0f, 0.6f, 0.0f);
-		surface_ready = true;
-	}
-
+	float pi = std::acos(-1.0f);
+	static Surface surface = Surface(tu_to_3d_point_and_brightness,
+		0, 2*pi, 50,
+		0, 2*pi, 50,
+		1.0f, 0.6f, 0.0f);
 	surface.render(camera, map, this->get_location());
 }
 
