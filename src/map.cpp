@@ -176,26 +176,25 @@ static Section *find_or_add_section(MapPrivate& map, int startx, int startz)
 	std::pair<int, int> key = { startx, startz };
 
 	if (map.sections.find(std::make_pair(startx, startz)) == map.sections.end()) {
-		// Wait until there is an item in the queue
-		while(1) {
-			int ret = SDL_LockMutex(map.queue.lock);
-			SDL_assert(ret == 0);
+		int ret = SDL_LockMutex(map.queue.lock);
+		SDL_assert(ret == 0);
 
-			bool empty = map.queue.sections.empty();
-			if (!empty) {
-				map.sections[key] = std::move(map.queue.sections.end()[-1]);
-				map.queue.sections.pop_back();
-			}
-
-			ret = SDL_UnlockMutex(map.queue.lock);
-			SDL_assert(ret == 0);
-
-			if (empty)
-				SDL_Delay(1);
-			else
-				break;
+		std::unique_ptr<Section> section = nullptr;
+		if (!map.queue.sections.empty()) {
+			section = std::move(map.queue.sections.end()[-1]);
+			map.queue.sections.pop_back();
 		}
 
+		ret = SDL_UnlockMutex(map.queue.lock);
+		SDL_assert(ret == 0);
+
+		if (!section) {
+			log_printf("Section queue was empty, generating a section outside queue");
+			section = std::make_unique<Section>();
+			generate_section(*section);  // slow
+		}
+
+		map.sections[key] = std::move(section);
 		log_printf("added a section, map now has %d sections", (int)map.sections.size());
 	}
 
