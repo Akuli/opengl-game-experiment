@@ -461,8 +461,11 @@ std::vector<const Enemy*> Map::find_enemies_within_circle(float center_x, float 
 	std::vector<const Enemy*> result = {};
 	for (LocationAndSection las : find_sections_within_circle(*this->priv, center_x, center_z, radius)) {
 		for (int i = 0; i < las.section->enemies.size(); i++) {
-			// TODO: filter
-			result.push_back(&las.section->enemies.data()[i]);
+			Enemy* enemy = &las.section->enemies.data()[i];
+			float dx = center_x - enemy->get_location().x;
+			float dz = center_z - enemy->get_location().z;
+			if (dx*dx + dz*dz < radius*radius)
+				result.push_back(&las.section->enemies.data()[i]);
 		}
 	}
 	return result;
