@@ -5,6 +5,7 @@
 #define WINDOW_HEIGHT 600
 
 #define CAMERA_HEIGHT 15
+#define CAMERA_MIN_HEIGHT 5  // Won't dip any lower than this amount above map surface
 #define CAMERA_HORIZONTAL_DISTANCE 20
 #define VIEW_RADIUS 80
 

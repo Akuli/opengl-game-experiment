@@ -147,4 +147,9 @@ void Player::move_and_turn(int z_direction, int angle_direction, Map& map, float
 	this->physics_object.set_extra_force(this->camera.cam2world * vec3{0, 0, PLAYER_MOVING_FORCE*z_direction});
 	this->physics_object.update(map, dt);
 	this->camera.location = this->get_location() + this->camera.cam2world*vec3{0,CAMERA_HEIGHT,CAMERA_HORIZONTAL_DISTANCE};
+
+	float camera_y_min = map.get_height(this->camera.location.x, this->camera.location.z) + CAMERA_MIN_HEIGHT;
+	// TODO: make this happen smoother? it is currently a bit weird
+	if (this->camera.location.y < camera_y_min)
+		this->camera.location.y = camera_y_min;
 }
