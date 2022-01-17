@@ -12,6 +12,6 @@ public:
 	void move_and_turn(int z_direction, int angle_direction, Map& map, float dt);
 
 private:
-	double angle;
+	float camera_angle;
 	PhysicsObject physics_object;
 };
