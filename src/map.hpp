@@ -7,9 +7,9 @@
 #include <memory>
 #include <vector>
 
-class Enemy;  // FIXME: project structure = shit
+class Enemy;  // IWYU pragma: keep  // FIXME: project structure = shit
+struct MapPrivate;  // IWYU pragma: keep  // don't want to shit private stuff all over header file
 
-struct MapPrivate;  // don't want to shit private stuff all over header file
 class Map {
 public:
 	Map();
