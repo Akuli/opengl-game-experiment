@@ -83,6 +83,7 @@ int main(int argc, char **argv)
 		glClearColor(0, 0, 0, 0);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		game_state.map.render(game_state.player.camera);
+		game_state.player.render(game_state.player.camera, game_state.map);
 		for (const Enemy* e : game_state.map.find_enemies_within_circle(game_state.player.get_location().x, game_state.player.get_location().z, VIEW_RADIUS))
 		{
 			e->render(game_state.player.camera, game_state.map);
