@@ -13,13 +13,14 @@ Player::Player(float initial_height) : physics_object(vec3(0,initial_height,0)) 
 
 static vec4 point_on_surface(float t, float u)
 {
-	using std::cos, std::sin;
-	return vec4{ u*cos(t), 2*(1 - u*u) + u*u*u*0.2f*(1+sin(10*t)), u*sin(t), u };
+	using std::cos, std::sin, std::log;
+	float r = 2 + cos(u);
+	return vec4{ r*cos(t), (1 + sin(u)), r*sin(t), unlerp(-1,1,cos(t)) };
 }
 
 static std::vector<std::array<vec4, 3>> generate_vertex_data()
 {
-	static constexpr int tsteps = 150, usteps = 10;
+	static constexpr int tsteps = 50, usteps = 50;
 
 	std::vector<std::array<vec4, 3>> vertex_data = {};
 	float pi = std::acos(-1.0f);
@@ -28,8 +29,8 @@ static std::vector<std::array<vec4, 3>> generate_vertex_data()
 		for (int ustep = 0; ustep < usteps; ustep++) {
 			float t1 = lerp<float>(0, 2*pi, tstep/(float)tsteps);
 			float t2 = lerp<float>(0, 2*pi, (tstep+1)/(float)tsteps);
-			float u1 = lerp<float>(0, 1, ustep/(float)usteps);
-			float u2 = lerp<float>(0, 1, (ustep+1)/(float)usteps);
+			float u1 = lerp<float>(0, 2*pi, ustep/(float)usteps);
+			float u2 = lerp<float>(0, 2*pi, (ustep+1)/(float)usteps);
 
 			vec4 a = point_on_surface(t1, u1);
 			vec4 b = point_on_surface(t1, u2);
@@ -38,15 +39,6 @@ static std::vector<std::array<vec4, 3>> generate_vertex_data()
 
 			vertex_data.push_back(std::array<vec4, 3>{a,b,c});
 			vertex_data.push_back(std::array<vec4, 3>{d,b,c});
-		}
-	}
-
-	// Scale it up
-	for (std::array<vec4, 3>& triangle : vertex_data) {
-		for (vec4& corner : triangle) {
-			corner.x *= 2;
-			corner.y *= 3;  // taller than wide
-			corner.z *= 2;
 		}
 	}
 
@@ -75,7 +67,7 @@ static void initialize_rendering(GLuint& shader_program_out, GLuint& vbo_out, in
 			"{\n"
 			"    vec3 pos = world2cam*(mapRotation*positionAndColor.xyz + addToLocation);\n"
 			"    gl_Position = locationFromCameraToGlPosition(pos);\n"
-			"    vertexToFragmentColor = darkerAtDistance(vec3(1,1,0)*mix(0.1, 0.4, 1-positionAndColor.w), pos);\n"
+			"    vertexToFragmentColor = darkerAtDistance(vec3(1,0.6,0)*mix(0.3, 0.6, 1-positionAndColor.w), pos);\n"
 			"}\n"
 			;
 		shader_program = OpenglBoilerplate::create_shader_program(vertex_shader);
