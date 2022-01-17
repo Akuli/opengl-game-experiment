@@ -4,14 +4,13 @@
 #include <cstdlib>
 #include <ctime>
 #include <vector>
-#include "camera.hpp"
 #include "config.hpp"
 #include "enemy.hpp"
 #include "linalg.hpp"
 #include "log.hpp"
 #include "map.hpp"
 #include "opengl_boilerplate.hpp"
-#include "physics.hpp"
+#include "player.hpp"
 
 static double counter_in_seconds()
 {
@@ -20,8 +19,7 @@ static double counter_in_seconds()
 
 struct GameState {
 	Map map;
-	PhysicsObject player = PhysicsObject(vec3{0, map.get_height(0,0), 0});
-	Camera camera;
+	Player player = Player(map.get_height(0,0));
 	float camera_angle;
 	double start_time = counter_in_seconds();
 	double next_enemy_time = counter_in_seconds();
@@ -49,13 +47,9 @@ struct GameState {
 			(int)this->map.get_number_of_enemies(), enemy_delay);
 	}
 
-	void update_physics(float dt, int camera_angle_direction) {
-		this->camera_angle += PLAYER_TURNING_SPEED*dt*camera_angle_direction;
-		this->camera.cam2world = mat3::rotation_about_y(this->camera_angle);
-		this->camera.world2cam = mat3::rotation_about_y(-this->camera_angle);
-
-		this->player.update(this->map, dt);
-		this->map.move_enemies(this->camera.location, dt);
+	void update_physics(int z_direction, int angle_direction, float dt) {
+		this->player.move_and_turn(z_direction, angle_direction, this->map, dt);
+		this->map.move_enemies(this->player.get_location(), dt);
 	}
 };
 
@@ -78,20 +72,19 @@ int main(int argc, char **argv)
 		for (double rem = counter_in_seconds() - last_time; rem > 0; rem -= MIN_PHYSICS_STEP_SECONDS)
 		{
 			float dt = static_cast<float>(std::min(rem, MIN_PHYSICS_STEP_SECONDS));
-			game_state.update_physics(dt, angledir);
+			game_state.update_physics(zdir, angledir, dt);
 		}
 		last_time = counter_in_seconds();
-
-		game_state.camera.location = game_state.player.get_location() + vec3{0,CAMERA_HEIGHT,0};
 
 		game_state.add_enemy_if_needed();
 
 		glClearColor(0, 0, 0, 0);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		game_state.map.render(game_state.camera);
+		game_state.map.render(game_state.player.camera);
+		game_state.player.render(game_state.player.camera, game_state.map);
 		for (const Enemy* e : game_state.map.find_enemies_within_circle(game_state.player.get_location().x, game_state.player.get_location().z, VIEW_RADIUS))
 		{
-			e->render(game_state.camera, game_state.map);
+			e->render(game_state.player.camera, game_state.map);
 		}
 		SDL_GL_SwapWindow(boilerplate.window);
 
@@ -123,7 +116,5 @@ int main(int argc, char **argv)
 			default:
 				break;
 		}
-
-		game_state.player.set_extra_force(game_state.camera.cam2world * vec3{0, 0, PLAYER_MOVING_FORCE*zdir});
 	}
 }
