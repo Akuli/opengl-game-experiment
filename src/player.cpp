@@ -75,7 +75,7 @@ static void initialize_rendering(GLuint& shader_program_out, GLuint& vbo_out, in
 			"{\n"
 			"    vec3 pos = world2cam*(mapRotation*positionAndColor.xyz + addToLocation);\n"
 			"    gl_Position = locationFromCameraToGlPosition(pos);\n"
-			"    vertexToFragmentColor = darkerAtDistance(vec3(1,0,1)*mix(0.1, 0.4, 1-positionAndColor.w), pos);\n"
+			"    vertexToFragmentColor = darkerAtDistance(vec3(1,1,0)*mix(0.1, 0.4, 1-positionAndColor.w), pos);\n"
 			"}\n"
 			;
 		shader_program = OpenglBoilerplate::create_shader_program(vertex_shader);
