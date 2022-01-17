@@ -20,6 +20,7 @@ private:
 	GLuint shader_program;
 	GLuint vertex_buffer_object;
 	int triangle_count;
+	float r, g, b;
 };
 
 #endif

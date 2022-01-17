@@ -1,6 +1,5 @@
 #include "surface.hpp"
 #include <array>
-#include <cstdio>
 #include <functional>
 #include <string>
 #include <vector>
@@ -39,7 +38,7 @@ Surface::Surface(
 	std::function<vec4(float, float)> tu_to_3d_point_and_brightness,
 	float tmin, float tmax, int tstepcount,
 	float umin, float umax, int ustepcount,
-	float r, float g, float b)
+	float r, float g, float b) : r(r),g(g),b(b)
 {
 	std::vector<std::array<vec4, 3>> vertex_data = create_vertex_data(
 		tu_to_3d_point_and_brightness,
@@ -48,15 +47,12 @@ Surface::Surface(
 
 	this->triangle_count = vertex_data.size();
 
-	// TODO: use a uniform
-	char rgb_string[500];
-	std::sprintf(rgb_string, "vec3(%f,%f,%f)", r, g, b);
-
 	std::string vertex_shader =
 		"#version 330\n"
 		"\n"
 		"layout(location = 0) in vec4 positionAndColor;\n"
 		"uniform vec3 addToLocation;\n"
+		"uniform vec3 rgbWithMaxBrightness;\n"
 		"uniform mat3 world2cam;\n"
 		"uniform mat3 mapRotation;\n"
 		"smooth out vec4 vertexToFragmentColor;\n"
@@ -67,7 +63,7 @@ Surface::Surface(
 		"{\n"
 		"    vec3 pos = world2cam*(mapRotation*positionAndColor.xyz + addToLocation);\n"
 		"    gl_Position = locationFromCameraToGlPosition(pos);\n"
-		"    vertexToFragmentColor = darkerAtDistance(vec3("+std::string(rgb_string)+")*positionAndColor.w, pos);\n"
+		"    vertexToFragmentColor = darkerAtDistance(rgbWithMaxBrightness*positionAndColor.w, pos);\n"
 		"}\n"
 		;
 	this->shader_program = OpenglBoilerplate::create_shader_program(vertex_shader);
@@ -89,6 +85,10 @@ void Surface::render(const Camera& cam, Map& map, vec3 location)
 	}
 
 	glUseProgram(this->shader_program);
+
+	glUniform3f(
+		glGetUniformLocation(this->shader_program, "rgbWithMaxBrightness"),
+		this->r, this->g, this->b);
 
 	vec3 relative_location = location - cam.location;
 	glUniform3f(
