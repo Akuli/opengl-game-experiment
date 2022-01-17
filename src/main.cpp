@@ -41,8 +41,8 @@ struct GameState {
 		DO NOT use something like "enemy_delay *= 0.99" because that will result in
 		an exponentially small enemy delay, i.e. too many enemies.
 		*/
-		double time_passed = this->next_enemy_time - this->start_time;
-		double enemy_delay = 60/(60 + time_passed);
+		double minutes_passed = (this->next_enemy_time - this->start_time)/60;
+		double enemy_delay = 1/(1 + minutes_passed);
 		this->next_enemy_time += enemy_delay;
 
 		log_printf("Added an enemy, now there are %d enemies and next adding will happen after %.2fsec",
