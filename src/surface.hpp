@@ -1,9 +1,10 @@
 #ifndef SURFACE_H
 #define SURFACE_H
 
-#include <functional>
 #include <GL/glew.h>
+#include <functional>
 #include "camera.hpp"
+#include "linalg.hpp"
 #include "map.hpp"
 
 class Surface {

@@ -1,6 +1,9 @@
 #include "surface.hpp"
+#include <array>
+#include <cstdio>
 #include <functional>
 #include <string>
+#include <vector>
 #include "camera.hpp"
 #include "map.hpp"
 #include "misc.hpp"

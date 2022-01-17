@@ -1,12 +1,10 @@
+#include "player.hpp"
 #include <SDL2/SDL.h>
-#include <GL/glew.h>
+#include <cmath>
+#include <functional>
 #include "config.hpp"
 #include "physics.hpp"
 #include "camera.hpp"
-#include "player.hpp"
-#include <string>
-#include "opengl_boilerplate.hpp"
-#include "log.hpp"
 #include "misc.hpp"
 #include "surface.hpp"
 

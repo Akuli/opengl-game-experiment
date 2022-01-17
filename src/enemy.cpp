@@ -1,15 +1,10 @@
 #include "enemy.hpp"
-#include <GL/glew.h>
-#include <array>
-#include <cmath>
-#include <string>
-#include <vector>
+#include <functional>
 #include "camera.hpp"
 #include "config.hpp"
 #include "linalg.hpp"
 #include "map.hpp"
 #include "misc.hpp"
-#include "opengl_boilerplate.hpp"
 #include "surface.hpp"
 
 Enemy::Enemy(vec3 initial_location) : physics_object{PhysicsObject(initial_location, ENEMY_MAX_SPEED)}
