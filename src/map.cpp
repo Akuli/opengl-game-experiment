@@ -390,6 +390,48 @@ int Map::get_number_of_enemies() const {
 	return result;
 }
 
+
+static bool circle_and_line_segment_intersect(vec2 center, float r, vec2 start, vec2 end)
+{
+	// Find t so that the point lerp(start,end,t) is as close to the center as possible
+	vec2 dir = end-start;
+	float t = unlerp(start.dot(dir), end.dot(dir), center.dot(dir));
+
+	// Make sure we stay on the line segment
+	if (t < 0) t = 0;
+	if (t > 1) t = 1;
+
+	// Check if the point we got is in the circle
+	return (center - lerp(start, end, t)).length_squared() < r*r;
+}
+
+static bool circle_intersects_section(vec2 center, float r, int section_start_x, int section_start_z)
+{
+	// If the entire circle is inside the section, this check is needed
+	if (get_section_start_coordinate(center.x) == section_start_x &&
+		get_section_start_coordinate(center.y) == section_start_z)
+	{
+		return true;
+	}
+
+	vec2 corners[4] = {
+		vec2(section_start_x, section_start_z),
+		vec2(section_start_x, section_start_z+SECTION_SIZE),
+		vec2(section_start_x+SECTION_SIZE, section_start_z+SECTION_SIZE),
+		vec2(section_start_x+SECTION_SIZE, section_start_z),
+	};
+
+	for (int i = 0; i < 4; i++) {
+		vec2 start = corners[i];
+		vec2 end = corners[(i+1)%4];
+
+		if (circle_and_line_segment_intersect(center, r, start, end))
+			return true;
+	}
+	return false;
+}
+
+
 struct LocationAndSection {
 	int startx, startz;
 	Section* section;
@@ -404,10 +446,10 @@ static std::vector<LocationAndSection> find_sections_within_circle(const MapPriv
 
 	for (int startx = startx_min; startx <= startx_max; startx += SECTION_SIZE) {
 		for (int startz = startz_min; startz <= startz_max; startz += SECTION_SIZE) {
-			// TODO: skip if the entire section is outside circle
-			auto find_result = map.sections.find(std::make_pair(startx, startz));
-			if (find_result != map.sections.end()) {
-				result.push_back({ startx, startz, find_result->second.get() });
+			if (circle_intersects_section(vec2{center_x,center_z}, radius, startx, startz)) {
+				auto find_result = map.sections.find(std::make_pair(startx, startz));
+				if (find_result != map.sections.end())
+					result.push_back({ startx, startz, find_result->second.get() });
 			}
 		}
 	}
