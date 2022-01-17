@@ -103,7 +103,7 @@ void Player::render(const Camera& cam, Map& map) const
 	if (above_floor > 0) {
 		// When the enemy is flying, don't follow ground shapes much
 		normal_vector /= normal_vector.length();
-		normal_vector.y += above_floor*above_floor;
+		normal_vector.y += above_floor*above_floor*0.2f;
 	}
 
 	GLuint shader_program, vbo;
