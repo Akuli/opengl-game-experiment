@@ -12,6 +12,7 @@
 #include "map.hpp"
 #include "opengl_boilerplate.hpp"
 #include "physics.hpp"
+#include "player.hpp"
 
 static double counter_in_seconds()
 {
@@ -20,7 +21,7 @@ static double counter_in_seconds()
 
 struct GameState {
 	Map map;
-	PhysicsObject player = PhysicsObject(vec3{0, map.get_height(0,0), 0});
+	Player player = Player(map.get_height(0,0));
 	Camera camera;
 	float camera_angle;
 	double start_time = counter_in_seconds();
@@ -49,12 +50,12 @@ struct GameState {
 			(int)this->map.get_number_of_enemies(), enemy_delay);
 	}
 
-	void update_physics(float dt, int camera_angle_direction) {
+	void update_physics(int z_direction, int angle_direction, float dt, int camera_angle_direction) {
 		this->camera_angle += PLAYER_TURNING_SPEED*dt*camera_angle_direction;
 		this->camera.cam2world = mat3::rotation_about_y(this->camera_angle);
 		this->camera.world2cam = mat3::rotation_about_y(-this->camera_angle);
 
-		this->player.update(this->map, dt);
+		this->player.move_and_turn(z_direction, angle_direction, this->map, dt);
 		this->map.move_enemies(this->camera.location, dt);
 	}
 };
@@ -78,7 +79,7 @@ int main(int argc, char **argv)
 		for (double rem = counter_in_seconds() - last_time; rem > 0; rem -= MIN_PHYSICS_STEP_SECONDS)
 		{
 			float dt = static_cast<float>(std::min(rem, MIN_PHYSICS_STEP_SECONDS));
-			game_state.update_physics(dt, angledir);
+			game_state.update_physics(zdir, angledir, dt, angledir);
 		}
 		last_time = counter_in_seconds();
 
@@ -123,7 +124,5 @@ int main(int argc, char **argv)
 			default:
 				break;
 		}
-
-		game_state.player.set_extra_force(game_state.camera.cam2world * vec3{0, 0, PLAYER_MOVING_FORCE*zdir});
 	}
 }
