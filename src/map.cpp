@@ -14,6 +14,7 @@
 #include "linalg.hpp"
 #include "log.hpp"
 #include "misc.hpp"
+#include "enemy.hpp"
 #include "opengl_boilerplate.hpp"
 
 static constexpr int SECTION_SIZE = 40;  // side length of section square on xz plane
@@ -24,6 +25,11 @@ struct GaussianCurveMountain {
 };
 
 struct Section {
+	Section() = default;
+	Section(const Section&) = delete;
+
+	std::vector<Enemy> enemies;
+
 	/*
 	y = yscale*e^(-(((x - centerx) / xzscale)^2 + ((z - centerz) / xzscale)^2))
 	yscale can be negative, xzscale can't
@@ -46,9 +52,6 @@ struct Section {
 	std::array<std::array<float, SECTION_SIZE + 1>, SECTION_SIZE + 1> y_table;
 	std::array<std::array<vec3, 3>, TRIANGLES_PER_SECTION> vertexdata;
 	bool y_table_and_vertexdata_ready;
-
-	Section() = default;
-	Section(const Section&) = delete;
 };
 
 static void generate_section(Section& section)
@@ -150,7 +153,7 @@ static int section_preparing_thread(void *queueptr)
 // pairs aren't hashable :(
 // https://stackoverflow.com/a/32685618
 struct IntPairHasher {
-	size_t operator() (const std::pair<int,int> &pair) const {
+	size_t operator()(const std::pair<int,int>& pair) const {
 		size_t h1 = std::hash<int>{}(pair.first);
 		size_t h2 = std::hash<int>{}(pair.second);
 		// both magic numbers are primes, to prevent patterns that place many numbers similarly
@@ -370,4 +373,130 @@ Map::~Map()
 	this->priv->queue.quit = true;
 	SDL_WaitThread(this->priv->prepthread, nullptr);
 	SDL_DestroyMutex(this->priv->queue.lock);
+}
+
+
+void Map::add_enemy(const Enemy& enemy) {
+	int startx = get_section_start_coordinate(enemy.get_location().x);
+	int startz = get_section_start_coordinate(enemy.get_location().z);
+	Section *section = find_or_add_section(*this->priv, startx, startz);
+	section->enemies.push_back(enemy);
+}
+
+int Map::get_number_of_enemies() const {
+	int result = 0;
+	for (const auto& item : this->priv->sections)
+		result += item.second->enemies.size();
+	return result;
+}
+
+
+static bool circle_and_line_segment_intersect(vec2 center, float r, vec2 start, vec2 end)
+{
+	// Find t so that the point lerp(start,end,t) is as close to the center as possible
+	vec2 dir = end-start;
+	float t = unlerp(start.dot(dir), end.dot(dir), center.dot(dir));
+
+	// Make sure we stay on the line segment
+	if (t < 0) t = 0;
+	if (t > 1) t = 1;
+
+	// Check if the point we got is in the circle
+	return (center - lerp(start, end, t)).length_squared() < r*r;
+}
+
+static bool circle_intersects_section(vec2 center, float r, int section_start_x, int section_start_z)
+{
+	// If the entire circle is inside the section, this check is needed
+	if (get_section_start_coordinate(center.x) == section_start_x &&
+		get_section_start_coordinate(center.y) == section_start_z)
+	{
+		return true;
+	}
+
+	vec2 corners[4] = {
+		vec2(section_start_x, section_start_z),
+		vec2(section_start_x, section_start_z+SECTION_SIZE),
+		vec2(section_start_x+SECTION_SIZE, section_start_z+SECTION_SIZE),
+		vec2(section_start_x+SECTION_SIZE, section_start_z),
+	};
+
+	for (int i = 0; i < 4; i++) {
+		vec2 start = corners[i];
+		vec2 end = corners[(i+1)%4];
+
+		if (circle_and_line_segment_intersect(center, r, start, end))
+			return true;
+	}
+	return false;
+}
+
+
+struct LocationAndSection {
+	int startx, startz;
+	Section* section;
+};
+
+static std::vector<LocationAndSection> find_sections_within_circle(const MapPrivate& map, float center_x, float center_z, float radius) {
+	std::vector<LocationAndSection> result = {};
+	int startx_min = get_section_start_coordinate(center_x - radius);
+	int startx_max = get_section_start_coordinate(center_x + radius);
+	int startz_min = get_section_start_coordinate(center_z - radius);
+	int startz_max = get_section_start_coordinate(center_z + radius);
+
+	for (int startx = startx_min; startx <= startx_max; startx += SECTION_SIZE) {
+		for (int startz = startz_min; startz <= startz_max; startz += SECTION_SIZE) {
+			if (circle_intersects_section(vec2{center_x,center_z}, radius, startx, startz)) {
+				auto find_result = map.sections.find(std::make_pair(startx, startz));
+				if (find_result != map.sections.end())
+					result.push_back({ startx, startz, find_result->second.get() });
+			}
+		}
+	}
+	return result;
+}
+
+std::vector<const Enemy*> Map::find_enemies_within_circle(float center_x, float center_z, float radius) const
+{
+	std::vector<const Enemy*> result = {};
+	for (LocationAndSection las : find_sections_within_circle(*this->priv, center_x, center_z, radius)) {
+		for (int i = 0; i < las.section->enemies.size(); i++) {
+			Enemy* enemy = &las.section->enemies.data()[i];
+			float dx = center_x - enemy->get_location().x;
+			float dz = center_z - enemy->get_location().z;
+			if (dx*dx + dz*dz < radius*radius)
+				result.push_back(&las.section->enemies.data()[i]);
+		}
+	}
+	return result;
+}
+
+void Map::move_enemies(vec3 player_location, float dt)
+{
+	std::vector<Enemy> moved = {};
+
+	for (LocationAndSection las : find_sections_within_circle(*this->priv, player_location.x, player_location.z, 2*VIEW_RADIUS)) {
+		std::vector<Enemy>& enemies = las.section->enemies;
+
+		for (int i = enemies.size() - 1; i >= 0; i--) {
+			enemies[i].move_towards_player(player_location, *this, dt);
+
+			int startx = get_section_start_coordinate(enemies[i].get_location().x);
+			int startz = get_section_start_coordinate(enemies[i].get_location().z);
+			if (startx != las.startx || startz != las.startz) {
+				log_printf("Enemy moves to different section");
+				if (i != enemies.size()-1)
+					std::swap(enemies[i], enemies[enemies.size()-1]);
+				moved.push_back(enemies[enemies.size()-1]);
+				enemies.pop_back();
+			}
+		}
+	}
+
+	for (const Enemy& e : moved) {
+		int startx = get_section_start_coordinate(e.get_location().x);
+		int startz = get_section_start_coordinate(e.get_location().z);
+		Section* section = find_or_add_section(*this->priv, startx, startz);
+		section->enemies.push_back(e);
+	}
 }

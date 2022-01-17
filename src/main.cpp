@@ -23,20 +23,30 @@ struct GameState {
 	PhysicsObject player = PhysicsObject(vec3{0, map.get_height(0,0), 0});
 	Camera camera;
 	float camera_angle;
-	std::vector<Enemy> enemies;
+	double start_time = counter_in_seconds();
+	double next_enemy_time = counter_in_seconds();
 
 	GameState(const GameState &) = delete;
 
-	double next_enemy_time = counter_in_seconds() + ENEMY_DELAY;
 	void add_enemy_if_needed() {
 		if (counter_in_seconds() < this->next_enemy_time)
 			return;
 
-		log_printf("There are %d enemies, adding one more", (int)this->enemies.size());
 		float x, z;
 		Enemy::decide_location(this->player.get_location(), x, z);
-		this->enemies.push_back(Enemy(vec3{ x, this->map.get_height(x, z), z }));
-		this->next_enemy_time += ENEMY_DELAY;
+		this->map.add_enemy(Enemy(vec3{ x, this->map.get_height(x, z), z }));
+
+		/*
+		Later in the game, produce enemies more quickly.
+		DO NOT use something like "enemy_delay *= 0.99" because that will result in
+		an exponentially small enemy delay, i.e. too many enemies.
+		*/
+		double minutes_passed = (this->next_enemy_time - this->start_time)/60;
+		double enemy_delay = 1/(1 + minutes_passed);
+		this->next_enemy_time += enemy_delay;
+
+		log_printf("Added an enemy, now there are %d enemies and next adding will happen after %.2fsec",
+			(int)this->map.get_number_of_enemies(), enemy_delay);
 	}
 
 	void update_physics(float dt, int camera_angle_direction) {
@@ -45,9 +55,7 @@ struct GameState {
 		this->camera.world2cam = mat3::rotation_about_y(-this->camera_angle);
 
 		this->player.update(this->map, dt);
-		for (Enemy& e : this->enemies) {
-			e.move_towards_player(this->camera.location, this->map, dt);
-		}
+		this->map.move_enemies(this->camera.location, dt);
 	}
 };
 
@@ -81,8 +89,10 @@ int main(int argc, char **argv)
 		glClearColor(0, 0, 0, 0);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		game_state.map.render(game_state.camera);
-		for (const Enemy& e : game_state.enemies)
-			e.render(game_state.camera, game_state.map);
+		for (const Enemy* e : game_state.map.find_enemies_within_circle(game_state.player.get_location().x, game_state.player.get_location().z, VIEW_RADIUS))
+		{
+			e->render(game_state.camera, game_state.map);
+		}
 		SDL_GL_SwapWindow(boilerplate.window);
 
 		SDL_Event e;

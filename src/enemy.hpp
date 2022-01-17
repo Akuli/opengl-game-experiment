@@ -9,9 +9,8 @@
 class Enemy {
 public:
 	Enemy(vec3 initial_location);
-	Enemy(const Enemy&) = delete;
-	Enemy(Enemy&&) = default;
 
+	vec3 get_location() const { return this->physics_object.get_location(); }
 	void render(const Camera& camera, Map& map) const;
 	void move_towards_player(vec3 player_location, Map& map, float dt);
 
