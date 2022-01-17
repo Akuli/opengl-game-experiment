@@ -78,8 +78,6 @@ int main(int argc, char **argv)
 		}
 		last_time = counter_in_seconds();
 
-		game_state.player.camera.location = game_state.player.get_location() + vec3{0,CAMERA_HEIGHT,0};
-
 		game_state.add_enemy_if_needed();
 
 		glClearColor(0, 0, 0, 0);
