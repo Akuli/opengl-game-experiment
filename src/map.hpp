@@ -6,7 +6,6 @@
 
 #include <memory>
 #include <vector>
-#include <unordered_map>
 
 class Enemy;  // FIXME: project structure = shit
 
