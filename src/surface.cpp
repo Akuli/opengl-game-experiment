@@ -11,7 +11,7 @@
 
 
 static std::vector<std::array<vec4, 3>> create_vertex_data(
-	std::function<vec4(float, float)> tu_to_3d_point_and_brightness,
+	std::function<vec4(vec2)> tu_to_3d_point_and_brightness,
 	float tmin, float tmax, int tstepcount,
 	float umin, float umax, int ustepcount)
 {
@@ -23,10 +23,10 @@ static std::vector<std::array<vec4, 3>> create_vertex_data(
 			float u1 = lerp<float>(umin, umax,  ustep   /float(ustepcount));
 			float u2 = lerp<float>(umin, umax, (ustep+1)/float(ustepcount));
 
-			vec4 a = tu_to_3d_point_and_brightness(t1, u1);
-			vec4 b = tu_to_3d_point_and_brightness(t1, u2);
-			vec4 c = tu_to_3d_point_and_brightness(t2, u1);
-			vec4 d = tu_to_3d_point_and_brightness(t2, u2);
+			vec4 a = tu_to_3d_point_and_brightness(vec2{t1, u1});
+			vec4 b = tu_to_3d_point_and_brightness(vec2{t1, u2});
+			vec4 c = tu_to_3d_point_and_brightness(vec2{t2, u1});
+			vec4 d = tu_to_3d_point_and_brightness(vec2{t2, u2});
 
 			vertex_data.push_back(std::array<vec4, 3>{a,b,c});
 			vertex_data.push_back(std::array<vec4, 3>{d,b,c});
@@ -36,12 +36,13 @@ static std::vector<std::array<vec4, 3>> create_vertex_data(
 }
 
 Surface::Surface(
-	std::function<vec4(float, float)> tu_to_3d_point_and_brightness,
+	std::function<vec4(vec2)> tu_to_3d_point_and_brightness,
 	float tmin, float tmax, int tstepcount,
 	float umin, float umax, int ustepcount,
 	float r, float g, float b)
 	:
 		tu_to_3d_point_and_brightness(tu_to_3d_point_and_brightness),
+		tmin(tmin), tmax(tmax), umin(umin), umax(umax),
 		r(r),g(g),b(b)
 {
 	this->vertex_data = create_vertex_data(
@@ -114,7 +115,7 @@ void Surface::render(const Camera& cam, Map& map, vec3 location)
 		glGetUniformLocation(this->shader_program, "world2cam"),
 		1, true, &cam.world2cam.rows[0][0]);
 
-	mat3 rotation = this->get_rotation_matrix();
+	mat3 rotation = this->get_rotation_matrix(map, location);
 	glUniformMatrix3fv(
 		glGetUniformLocation(this->shader_program, "mapRotation"),
 		1, true, &rotation.rows[0][0]);

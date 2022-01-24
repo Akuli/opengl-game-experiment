@@ -92,7 +92,7 @@ static void generate_section(Section& section)
 	// This loop is too slow to run within a single frame
 	for (int xidx = 0; xidx <= 3*SECTION_SIZE; xidx++) {
 		for (int zidx = 0; zidx <= 3*SECTION_SIZE; zidx++) {
-			int x = xidx - SECTION_SIZE;
+			/*int x = xidx - SECTION_SIZE;
 			int z = zidx - SECTION_SIZE;
 
 			float y = 0;
@@ -103,6 +103,8 @@ static void generate_section(Section& section)
 				y += section.mountains[i].yscale * expf(-1/(xzscale*xzscale) * (dx*dx + dz*dz));
 			}
 			section.raw_y_table[xidx][zidx] = y;
+			*/
+			section.raw_y_table[xidx][zidx] = 0;
 		}
 	}
 }

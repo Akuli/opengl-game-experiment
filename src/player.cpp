@@ -8,9 +8,10 @@
 #include "misc.hpp"
 #include "surface.hpp"
 
-static vec4 tu_to_3d_point_and_brightness(float t, float u)
+static vec4 tu_to_3d_point_and_brightness(vec2 tu)
 {
 	using std::cos, std::sin, std::log;
+	float t = tu.x, u = tu.y;
 	float r = 2 + cos(u);
 	return vec4{ r*cos(t), (1 + sin(u)), r*sin(t), lerp<float>(0.3f, 0.6f, unlerp(-1,1,-cos(t))) };
 }

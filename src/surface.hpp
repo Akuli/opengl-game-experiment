@@ -9,9 +9,11 @@
 
 class Surface {
 public:
-	std::function<vec4(float, float)> tu_to_3d_point_and_brightness;
+	std::function<vec4(vec2)> tu_to_3d_point_and_brightness;
+	float tmin, tmax;
+	float umin, umax;
 	Surface(
-		std::function<vec4(float, float)> tu_to_3d_point_and_brightness,
+		std::function<vec4(vec2)> tu_to_3d_point_and_brightness,
 		float tmin, float tmax, int tstepcount,
 		float umin, float umax, int ustepcount,
 		float r, float g, float b);
