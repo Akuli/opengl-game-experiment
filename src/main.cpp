@@ -11,6 +11,7 @@
 #include "map.hpp"
 #include "opengl_boilerplate.hpp"
 #include "player.hpp"
+#include "collision.hpp"
 
 static double counter_in_seconds()
 {
@@ -87,6 +88,12 @@ int main(int argc, char **argv)
 			e->physics_object.render(game_state.player.camera, game_state.map);
 		}
 		SDL_GL_SwapWindow(boilerplate.window);
+
+		for (const Enemy* e : game_state.map.find_enemies_within_circle(game_state.player.physics_object.location.x, game_state.player.physics_object.location.z, 10))
+		{
+			if (physics_objects_collide(e->physics_object, game_state.player.physics_object))
+				log_printf("collide");
+		}
 
 		SDL_Event e;
 		while (SDL_PollEvent(&e)) switch(e.type) {

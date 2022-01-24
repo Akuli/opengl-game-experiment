@@ -17,6 +17,8 @@ public:
 		float r, float g, float b);
 	void render(const Camera& cam, Map& map, vec3 location);
 
+	mat3 get_rotation_matrix(Map& map, vec3 location) const;
+
 private:
 	std::vector<std::array<vec4, 3>> vertex_data;
 	void prepare_shader_program();

@@ -79,19 +79,24 @@ void Surface::prepare_shader_program()
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
-void Surface::render(const Camera& cam, Map& map, vec3 location)
+mat3 Surface::get_rotation_matrix(Map& map, vec3 location) const
 {
-	if (this->shader_program == 0) {
-		log_printf("PREP");
-		this->prepare_shader_program();
-	}
-
 	vec3 normal_vector = map.get_normal_vector(location.x, location.z);
 	float above_floor = location.y - map.get_height(location.x, location.z);
 	if (above_floor > 0) {
 		// When the player or enemy is flying, don't follow ground shapes much
 		normal_vector /= normal_vector.length();
 		normal_vector.y += above_floor*above_floor*0.2f;
+	}
+
+	return mat3::rotation_to_tilt_y_towards_vector(normal_vector);
+}
+
+void Surface::render(const Camera& cam, Map& map, vec3 location)
+{
+	if (this->shader_program == 0) {
+		log_printf("PREP");
+		this->prepare_shader_program();
 	}
 
 	glUseProgram(this->shader_program);
@@ -109,7 +114,7 @@ void Surface::render(const Camera& cam, Map& map, vec3 location)
 		glGetUniformLocation(this->shader_program, "world2cam"),
 		1, true, &cam.world2cam.rows[0][0]);
 
-	mat3 rotation = mat3::rotation_to_tilt_y_towards_vector(normal_vector);
+	mat3 rotation = this->get_rotation_matrix();
 	glUniformMatrix3fv(
 		glGetUniformLocation(this->shader_program, "mapRotation"),
 		1, true, &rotation.rows[0][0]);
