@@ -7,6 +7,7 @@
 #include "map.hpp"
 #include "misc.hpp"
 #include "opengl_boilerplate.hpp"
+#include "log.hpp"
 
 
 static std::vector<std::array<vec4, 3>> create_vertex_data(
@@ -38,15 +39,19 @@ Surface::Surface(
 	std::function<vec4(float, float)> tu_to_3d_point_and_brightness,
 	float tmin, float tmax, int tstepcount,
 	float umin, float umax, int ustepcount,
-	float r, float g, float b) : r(r),g(g),b(b)
+	float r, float g, float b)
+	:
+		tu_to_3d_point_and_brightness(tu_to_3d_point_and_brightness),
+		r(r),g(g),b(b)
 {
-	std::vector<std::array<vec4, 3>> vertex_data = create_vertex_data(
+	this->vertex_data = create_vertex_data(
 		tu_to_3d_point_and_brightness,
 		tmin, tmax, tstepcount,
 		umin, umax, ustepcount);
+}
 
-	this->triangle_count = vertex_data.size();
-
+void Surface::prepare_shader_program()
+{
 	std::string vertex_shader =
 		"#version 330\n"
 		"\n"
@@ -70,12 +75,17 @@ Surface::Surface(
 
 	glGenBuffers(1, &this->vertex_buffer_object);
 	glBindBuffer(GL_ARRAY_BUFFER, this->vertex_buffer_object);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(vertex_data[0])*vertex_data.size(), vertex_data.data(), GL_DYNAMIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(this->vertex_data[0])*vertex_data.size(), this->vertex_data.data(), GL_DYNAMIC_DRAW);
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
 void Surface::render(const Camera& cam, Map& map, vec3 location)
 {
+	if (this->shader_program == 0) {
+		log_printf("PREP");
+		this->prepare_shader_program();
+	}
+
 	vec3 normal_vector = map.get_normal_vector(location.x, location.z);
 	float above_floor = location.y - map.get_height(location.x, location.z);
 	if (above_floor > 0) {
@@ -107,7 +117,7 @@ void Surface::render(const Camera& cam, Map& map, vec3 location)
 	glBindBuffer(GL_ARRAY_BUFFER, this->vertex_buffer_object);
 	glEnableVertexAttribArray(0);
 	glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 0, 0);
-	glDrawArrays(GL_TRIANGLES, 0, 3*this->triangle_count);
+	glDrawArrays(GL_TRIANGLES, 0, 3*this->vertex_data.size());
 	glDisableVertexAttribArray(0);
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	glUseProgram(0);

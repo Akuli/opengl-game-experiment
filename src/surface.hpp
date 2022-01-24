@@ -9,6 +9,7 @@
 
 class Surface {
 public:
+	std::function<vec4(float, float)> tu_to_3d_point_and_brightness;
 	Surface(
 		std::function<vec4(float, float)> tu_to_3d_point_and_brightness,
 		float tmin, float tmax, int tstepcount,
@@ -17,9 +18,10 @@ public:
 	void render(const Camera& cam, Map& map, vec3 location);
 
 private:
+	std::vector<std::array<vec4, 3>> vertex_data;
+	void prepare_shader_program();
 	GLuint shader_program;
 	GLuint vertex_buffer_object;
-	int triangle_count;
 	float r, g, b;
 };
 

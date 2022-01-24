@@ -8,16 +8,13 @@
 
 class Enemy {
 public:
-	Enemy(vec3 initial_location);
-
-	vec3 get_location() const { return this->physics_object.get_location(); }
-	void render(const Camera& camera, Map& map) const;
-	void move_towards_player(vec3 player_location, Map& map, float dt);
-
 	static void decide_location(vec3 player_location, float& x, float& z);
+	Enemy(vec3 initial_location);
+	Enemy& operator=(const Enemy&) = default;
 
-private:
 	PhysicsObject physics_object;
+
+	void move_towards_player(vec3 player_location, Map& map, float dt);
 };
 
 #endif

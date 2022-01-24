@@ -4,19 +4,23 @@
 #include <cmath>
 #include "linalg.hpp"
 #include "map.hpp"
+#include "surface.hpp"
 
 class PhysicsObject {
 public:
-	PhysicsObject(vec3 initial_location, float max_speed = HUGE_VALF) : max_speed(max_speed), location(initial_location) {}
+	PhysicsObject(Surface* surface, vec3 initial_location, float max_speed = HUGE_VALF) : location(initial_location), surface(surface), max_speed(max_speed) {}
 
-	inline vec3 get_location() const { return this->location; }
+	vec3 location;
 	inline void set_extra_force(vec3 force) { this->extra_force = force; }
 	void update(Map& map, float dt);
+
+	void render(const Camera& cam, Map& map) const { this->surface->render(cam, map, this->location); }
+
 	bool touching_ground;
+	Surface* surface;  // reference caused weird compile errors elsewhere
 
 private:
 	float max_speed;
-	vec3 location;
 	vec3 speed;
 	vec3 extra_force;  // total force = gravity + extra force
 };

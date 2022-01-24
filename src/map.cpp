@@ -376,8 +376,8 @@ Map::~Map()
 
 
 void Map::add_enemy(const Enemy& enemy) {
-	int startx = get_section_start_coordinate(enemy.get_location().x);
-	int startz = get_section_start_coordinate(enemy.get_location().z);
+	int startx = get_section_start_coordinate(enemy.physics_object.location.x);
+	int startz = get_section_start_coordinate(enemy.physics_object.location.z);
 	Section *section = find_or_add_section(*this->priv, startx, startz);
 	section->enemies.push_back(enemy);
 }
@@ -461,8 +461,8 @@ std::vector<const Enemy*> Map::find_enemies_within_circle(float center_x, float 
 	for (LocationAndSection las : find_sections_within_circle(*this->priv, center_x, center_z, radius)) {
 		for (int i = 0; i < las.section->enemies.size(); i++) {
 			Enemy* enemy = &las.section->enemies.data()[i];
-			float dx = center_x - enemy->get_location().x;
-			float dz = center_z - enemy->get_location().z;
+			float dx = center_x - enemy->physics_object.location.x;
+			float dz = center_z - enemy->physics_object.location.z;
 			if (dx*dx + dz*dz < radius*radius)
 				result.push_back(&las.section->enemies.data()[i]);
 		}
@@ -480,21 +480,20 @@ void Map::move_enemies(vec3 player_location, float dt)
 		for (int i = enemies.size() - 1; i >= 0; i--) {
 			enemies[i].move_towards_player(player_location, *this, dt);
 
-			int startx = get_section_start_coordinate(enemies[i].get_location().x);
-			int startz = get_section_start_coordinate(enemies[i].get_location().z);
+			int startx = get_section_start_coordinate(enemies[i].physics_object.location.x);
+			int startz = get_section_start_coordinate(enemies[i].physics_object.location.z);
 			if (startx != las.startx || startz != las.startz) {
 				log_printf("Enemy moves to different section");
-				if (i != enemies.size()-1)
-					std::swap(enemies[i], enemies[enemies.size()-1]);
-				moved.push_back(enemies[enemies.size()-1]);
+				moved.push_back(enemies[i]);
+				enemies[i] = enemies[enemies.size()-1];
 				enemies.pop_back();
 			}
 		}
 	}
 
 	for (const Enemy& e : moved) {
-		int startx = get_section_start_coordinate(e.get_location().x);
-		int startz = get_section_start_coordinate(e.get_location().z);
+		int startx = get_section_start_coordinate(e.physics_object.location.x);
+		int startz = get_section_start_coordinate(e.physics_object.location.z);
 		Section* section = find_or_add_section(*this->priv, startx, startz);
 		section->enemies.push_back(e);
 	}
