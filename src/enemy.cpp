@@ -19,15 +19,15 @@ static Surface surface = Surface(
 	0, 1, 10,
 	1.0f, 0.0f, 1.0f);
 
-Enemy::Enemy(vec3 initial_location) : physics_object{PhysicsObject(&surface, initial_location, ENEMY_MAX_SPEED)}
+Enemy::Enemy(vec3 initial_location) : entity{Entity(&surface, initial_location, ENEMY_MAX_SPEED)}
 { }
 
 void Enemy::move_towards_player(vec3 player_location, Map& map, float dt)
 {
-	vec3 force = player_location - this->physics_object.location;
+	vec3 force = player_location - this->entity.location;
 	force.y = 0;
-	this->physics_object.set_extra_force(force.with_length(ENEMY_MOVING_FORCE));
-	this->physics_object.update(map, dt);
+	this->entity.set_extra_force(force.with_length(ENEMY_MOVING_FORCE));
+	this->entity.update(map, dt);
 }
 
 void Enemy::decide_location(vec3 player_location, float& x, float& z)

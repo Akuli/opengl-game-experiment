@@ -1,5 +1,5 @@
-#ifndef OPENGL_BOILERPLATE_H
-#define OPENGL_BOILERPLATE_H
+#ifndef OPENGL_BOILERPLATE_HPP
+#define OPENGL_BOILERPLATE_HPP
 
 #include <GL/glew.h>
 #include <SDL2/SDL.h>

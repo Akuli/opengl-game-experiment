@@ -3,7 +3,7 @@
 #include <cmath>
 #include <functional>
 #include "config.hpp"
-#include "physics.hpp"
+#include "entity.hpp"
 #include "camera.hpp"
 #include "misc.hpp"
 #include "surface.hpp"
@@ -23,7 +23,7 @@ static Surface surface = Surface(
 	0, 2*std::acos(-1.0f), 50,
 	1.0f, 0.6f, 0.0f);
 
-Player::Player(float initial_height) : physics_object(&surface, vec3(0,initial_height,0)) {}
+Player::Player(float initial_height) : entity(&surface, vec3(0,initial_height,0)) {}
 
 
 static void smooth_clamp_below(float& value, float min)
@@ -42,9 +42,9 @@ void Player::move_and_turn(int z_direction, int angle_direction, Map& map, float
 	this->camera.cam2world = mat3::rotation_about_y(this->camera_angle);
 	this->camera.world2cam = mat3::rotation_about_y(-this->camera_angle);
 
-	this->physics_object.set_extra_force(this->camera.cam2world * vec3{0, 0, PLAYER_MOVING_FORCE*z_direction});
-	this->physics_object.update(map, dt);
-	this->camera.location = this->physics_object.location + this->camera.cam2world*vec3{0,CAMERA_HEIGHT,CAMERA_HORIZONTAL_DISTANCE};
+	this->entity.set_extra_force(this->camera.cam2world * vec3{0, 0, PLAYER_MOVING_FORCE*z_direction});
+	this->entity.update(map, dt);
+	this->camera.location = this->entity.location + this->camera.cam2world*vec3{0,CAMERA_HEIGHT,CAMERA_HORIZONTAL_DISTANCE};
 
 	float camera_y_min = map.get_height(this->camera.location.x, this->camera.location.z) + CAMERA_MIN_HEIGHT;
 	smooth_clamp_below(this->camera.location.y, camera_y_min);

@@ -1,5 +1,5 @@
-#ifndef MAP_H
-#define MAP_H
+#ifndef MAP_HPP
+#define MAP_HPP
 
 #include <memory>
 #include <vector>
@@ -7,7 +7,7 @@
 #include "linalg.hpp"
 
 class Enemy;  // IWYU pragma: keep  // FIXME: project structure = shit
-class PhysicsObject;  // IWYU pragma: keep  // FIXME: project structure = shit
+class Entity;  // IWYU pragma: keep  // FIXME: project structure = shit
 struct MapPrivate;  // IWYU pragma: keep  // don't want to shit private stuff all over header file
 
 class Map {
@@ -28,7 +28,7 @@ public:
 
 	// TODO: don't return a vector, some kind of iterator instead?
 	std::vector<const Enemy*> find_enemies_within_circle(float center_x, float center_z, float radius) const;
-	std::vector<const Enemy*> find_colliding_enemies(const PhysicsObject& collide_with);
+	std::vector<const Enemy*> find_colliding_enemies(const Entity& collide_with);
 
 	void remove_enemies(const std::vector<const Enemy *> enemies);
 

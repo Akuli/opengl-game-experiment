@@ -1,5 +1,5 @@
-#ifndef LINALG_H
-#define LINALG_H
+#ifndef LINALG_HPP
+#define LINALG_HPP
 
 #include <array>
 #include <cmath>  // IWYU pragma: keep
