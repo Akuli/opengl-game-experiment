@@ -10,7 +10,6 @@ class Enemy {
 public:
 	static void decide_location(vec3 player_location, float& x, float& z);
 	Enemy(vec3 initial_location);
-	Enemy& operator=(const Enemy&) = default;
 
 	PhysicsObject physics_object;
 

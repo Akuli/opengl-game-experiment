@@ -1,6 +1,3 @@
-#ifndef COLLISION_HPP
-#define COLLISION_HPP
-
 #include "physics.hpp"
 #include "log.hpp"
 #include "misc.hpp"
@@ -125,6 +122,3 @@ bool physics_objects_collide(const PhysicsObject& a, const PhysicsObject& b, Map
 
 	return (minvalue < 0.01f);
 }
-
-
-#endif
