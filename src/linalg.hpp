@@ -19,6 +19,7 @@ public:
 	inline vec2& operator-=(vec2 other) { *this = *this-other; return *this; }
 	inline vec2& operator*=(float f) { *this = *this*f; return *this; }
 	inline vec2& operator/=(float f) { *this = *this/f; return *this; }
+	inline vec2 operator-() { return { -this->x, -this->y }; }
 
 	inline float dot(vec2 other) const { return this->x*other.x + this->y*other.y; }
 	inline float length_squared() const { return this->dot(*this); }
@@ -42,6 +43,7 @@ public:
 	inline vec3& operator-=(vec3 other) { *this = *this-other; return *this; }
 	inline vec3& operator*=(float f) { *this = *this*f; return *this; }
 	inline vec3& operator/=(float f) { *this = *this/f; return *this; }
+	inline vec3 operator-() { return { -this->x, -this->y, -this->z }; }
 
 	inline vec3 cross(vec3 other) const { return vec3{ this->y*other.z - this->z*other.y, this->z*other.x - this->x*other.z, this->x*other.y - this->y*other.x }; }
 
@@ -67,6 +69,11 @@ public:
 	inline vec4& operator-=(vec4 other) { *this = *this-other; return *this; }
 	inline vec4& operator*=(float f) { *this = *this*f; return *this; }
 	inline vec4& operator/=(float f) { *this = *this/f; return *this; }
+	inline vec4 operator-() { return { -this->x, -this->y, -this->z, -this->w }; }
+
+	inline vec2 xy() const { return {x,y}; }
+	inline vec2 zw() const { return {z,w}; }
+	inline vec3 xyz() const { return {x,y,z}; }
 
 	inline float dot(vec4 other) const { return this->x*other.x + this->y*other.y + this->z*other.z + this->w*other.w; }
 	inline float length_squared() const { return this->dot(*this); }

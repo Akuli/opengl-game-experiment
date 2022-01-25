@@ -11,11 +11,13 @@
 #include <vector>
 #include "camera.hpp"
 #include "config.hpp"
+#include "collision.hpp"
+#include "enemy.hpp"
 #include "linalg.hpp"
 #include "log.hpp"
 #include "misc.hpp"
-#include "enemy.hpp"
 #include "opengl_boilerplate.hpp"
+#include "physics.hpp"
 
 static constexpr int SECTION_SIZE = 40;  // side length of section square on xz plane
 static constexpr int TRIANGLES_PER_SECTION = 2*SECTION_SIZE*SECTION_SIZE;
@@ -376,8 +378,8 @@ Map::~Map()
 
 
 void Map::add_enemy(const Enemy& enemy) {
-	int startx = get_section_start_coordinate(enemy.get_location().x);
-	int startz = get_section_start_coordinate(enemy.get_location().z);
+	int startx = get_section_start_coordinate(enemy.physics_object.location.x);
+	int startz = get_section_start_coordinate(enemy.physics_object.location.z);
 	Section *section = find_or_add_section(*this->priv, startx, startz);
 	section->enemies.push_back(enemy);
 }
@@ -461,13 +463,50 @@ std::vector<const Enemy*> Map::find_enemies_within_circle(float center_x, float 
 	for (LocationAndSection las : find_sections_within_circle(*this->priv, center_x, center_z, radius)) {
 		for (int i = 0; i < las.section->enemies.size(); i++) {
 			Enemy* enemy = &las.section->enemies.data()[i];
-			float dx = center_x - enemy->get_location().x;
-			float dz = center_z - enemy->get_location().z;
+			float dx = center_x - enemy->physics_object.location.x;
+			float dz = center_z - enemy->physics_object.location.z;
 			if (dx*dx + dz*dz < radius*radius)
 				result.push_back(&las.section->enemies.data()[i]);
 		}
 	}
 	return result;
+}
+
+std::vector<const Enemy*> Map::find_colliding_enemies(const PhysicsObject& collide_with)
+{
+	std::vector<const Enemy*> result = {};
+
+	// TODO: hard-coded 10 also appears in a few other places
+	for (const Enemy* enemy : this->find_enemies_within_circle(collide_with.location.x, collide_with.location.z, 10)) {
+		if (physics_objects_collide(collide_with, enemy->physics_object, *this))
+			result.push_back(enemy);
+	}
+	return result;
+}
+
+void Map::remove_enemies(const std::vector<const Enemy *> enemies)
+{
+	if (enemies.size() != 0)
+		log_printf("Removing %zu enemies", enemies.size());
+
+	std::unordered_map<Section*, std::vector<int>> indexes_to_delete_by_section;
+	for (const Enemy* e : enemies) {
+		Section* section = this->priv->sections[std::make_pair(get_section_start_coordinate(e->physics_object.location.x), get_section_start_coordinate(e->physics_object.location.z))].get();
+		indexes_to_delete_by_section[section].push_back(e - &section->enemies[0]);
+	}
+
+	for (const auto& pair : indexes_to_delete_by_section) {
+		Section* section = pair.first;
+		std::vector<int> indexes = pair.second;
+		std::sort(indexes.begin(), indexes.end());
+		std::reverse(indexes.begin(), indexes.end());
+
+		// pop_back() invalidates iterators and can apparently shrink the vector
+		int len = section->enemies.size();
+		for (int i : indexes)
+			section->enemies[i] = section->enemies[--len];
+		section->enemies.erase(section->enemies.begin() + len, section->enemies.end());
+	}
 }
 
 void Map::move_enemies(vec3 player_location, float dt)
@@ -480,21 +519,20 @@ void Map::move_enemies(vec3 player_location, float dt)
 		for (int i = enemies.size() - 1; i >= 0; i--) {
 			enemies[i].move_towards_player(player_location, *this, dt);
 
-			int startx = get_section_start_coordinate(enemies[i].get_location().x);
-			int startz = get_section_start_coordinate(enemies[i].get_location().z);
+			int startx = get_section_start_coordinate(enemies[i].physics_object.location.x);
+			int startz = get_section_start_coordinate(enemies[i].physics_object.location.z);
 			if (startx != las.startx || startz != las.startz) {
 				log_printf("Enemy moves to different section");
-				if (i != enemies.size()-1)
-					std::swap(enemies[i], enemies[enemies.size()-1]);
-				moved.push_back(enemies[enemies.size()-1]);
+				moved.push_back(enemies[i]);
+				enemies[i] = enemies[enemies.size()-1];
 				enemies.pop_back();
 			}
 		}
 	}
 
 	for (const Enemy& e : moved) {
-		int startx = get_section_start_coordinate(e.get_location().x);
-		int startz = get_section_start_coordinate(e.get_location().z);
+		int startx = get_section_start_coordinate(e.physics_object.location.x);
+		int startz = get_section_start_coordinate(e.physics_object.location.z);
 		Section* section = find_or_add_section(*this->priv, startx, startz);
 		section->enemies.push_back(e);
 	}
