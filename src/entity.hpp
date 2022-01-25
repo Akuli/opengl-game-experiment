@@ -1,5 +1,5 @@
-#ifndef PHYSICS_H
-#define PHYSICS_H
+#ifndef ENTITY_HPP
+#define ENTITY_HPP
 
 #include <cmath>
 #include "camera.hpp"  // IWYU pragma: keep
@@ -7,9 +7,9 @@
 #include "map.hpp"
 #include "surface.hpp"
 
-class PhysicsObject {
+class Entity {
 public:
-	PhysicsObject(Surface* surface, vec3 initial_location, float max_speed = HUGE_VALF) : location(initial_location), surface(surface), max_speed(max_speed) {}
+	Entity(Surface* surface, vec3 initial_location, float max_speed = HUGE_VALF) : location(initial_location), surface(surface), max_speed(max_speed) {}
 
 	vec3 location;
 	inline void set_extra_force(vec3 force) { this->extra_force = force; }
@@ -19,6 +19,8 @@ public:
 
 	bool touching_ground;
 	Surface* surface;  // reference caused weird compile errors elsewhere
+
+	bool collides_with(const Entity& other, Map& map) const;
 
 private:
 	float max_speed;

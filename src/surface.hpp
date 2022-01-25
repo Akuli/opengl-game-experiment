@@ -1,5 +1,5 @@
-#ifndef SURFACE_H
-#define SURFACE_H
+#ifndef SURFACE_HPP
+#define SURFACE_HPP
 
 #include <GL/glew.h>
 #include <array>

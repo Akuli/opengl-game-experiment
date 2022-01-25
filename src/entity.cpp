@@ -1,4 +1,5 @@
-#include "collision.hpp"
+#include "entity.hpp"
+#include "config.hpp"
 #include <SDL2/SDL.h>
 #include <algorithm>
 #include <cmath>
@@ -7,10 +8,40 @@
 #include "linalg.hpp"
 #include "map.hpp"
 #include "misc.hpp"
-#include "physics.hpp"
+#include "entity.hpp"
 #include "surface.hpp"
 
-static constexpr float step_goal = 1e-4f;
+
+void Entity::update(Map& map, float dt)
+{
+	float map_height = map.get_height(this->location.x, this->location.z);
+	vec3 normal = map.get_normal_vector(this->location.x, this->location.z);
+
+	vec3 force = {0, -GRAVITY, 0};
+
+	if (this->location.y < map_height) {
+		this->touching_ground = true;
+
+		float friction = map_height - this->location.y;
+		if (friction > 1)
+			friction = 1;
+
+		this->location.y = map_height;
+		this->speed -= this->speed.projection_to(normal);
+		this->speed *= 1 - friction;
+		force += this->extra_force;
+	} else {
+		this->touching_ground = false;
+	}
+
+	vec3 acceleration = force;  // TODO: different masses?
+	this->speed += acceleration*dt;
+	this->location += speed*dt;
+
+	if (this->speed.length() > this->max_speed)
+		this->speed = this->speed.with_length(this->max_speed);
+}
+
 
 class MinimumFinder {
 public:
@@ -36,6 +67,8 @@ public:
 	}
 
 private:
+	static constexpr float step_goal = 1e-4f;
+
 	bool point_is_allowed(vec4 v) const
 	{
 		return xmin<v.x && v.x<xmax
@@ -87,27 +120,29 @@ private:
 	}
 };
 
-bool physics_objects_collide(const PhysicsObject& a, const PhysicsObject& b, Map& map)
+bool Entity::collides_with(const Entity& other, Map& map) const
 {
-	mat3 a_rotation = a.surface->get_rotation_matrix(map, a.location);
-	mat3 b_rotation = b.surface->get_rotation_matrix(map, b.location);
+	mat3 this_rotation = this->surface->get_rotation_matrix(map, this->location);
+	mat3 other_rotation = other.surface->get_rotation_matrix(map, other.location);
 
 	// Computes distance between two points. We want to find out if it can be zero.
-	std::function<float(vec4)> function_to_minimize = [&a,&b,&map,&a_rotation,&b_rotation](vec4 input) {
-		vec3 a_point_raw = a.surface->tu_to_3d_point_and_brightness(input.xy()).xyz();
-		vec3 b_point_raw = b.surface->tu_to_3d_point_and_brightness(input.zw()).xyz();
+	std::function<float(vec4)> function_to_minimize
+	= [this,&other,&map,&this_rotation,&other_rotation](vec4 input)
+	{
+		vec3 this_point_raw = this->surface->tu_to_3d_point_and_brightness(input.xy()).xyz();
+		vec3 other_point_raw = other.surface->tu_to_3d_point_and_brightness(input.zw()).xyz();
 
-		vec3 a_point = a.location + a_rotation*a_point_raw;
-		vec3 b_point = b.location + b_rotation*b_point_raw;
+		vec3 this_point = this->location + this_rotation*this_point_raw;
+		vec3 other_point = other.location + other_rotation*other_point_raw;
 
-		return (a_point - b_point).length_squared();
+		return (this_point - other_point).length_squared();
 	};
 
 	MinimumFinder minimum_finder = {
-		a.surface->tmin, a.surface->tmax,
-		a.surface->umin, a.surface->umax,
-		b.surface->tmin, b.surface->tmax,
-		b.surface->umin, b.surface->umax,
+		this->surface->tmin, this->surface->tmax,
+		this->surface->umin, this->surface->umax,
+		other.surface->tmin, other.surface->tmax,
+		other.surface->umin, other.surface->umax,
 		function_to_minimize,
 	};
 
@@ -119,10 +154,10 @@ bool physics_objects_collide(const PhysicsObject& a, const PhysicsObject& b, Map
 #define LOOP(NAME) for (int NAME = 0; NAME < step_count; NAME++)
 	LOOP(xstep) LOOP(ystep) LOOP(zstep) LOOP(wstep) {
 		vec4 v = {
-			lerp(a.surface->tmin, a.surface->tmax, (0.5f+xstep)/step_count),
-			lerp(a.surface->umin, a.surface->umax, (0.5f+ystep)/step_count),
-			lerp(b.surface->tmin, b.surface->tmax, (0.5f+zstep)/step_count),
-			lerp(b.surface->umin, b.surface->umax, (0.5f+wstep)/step_count),
+			lerp(this->surface->tmin, this->surface->tmax, (0.5f+xstep)/step_count),
+			lerp(this->surface->umin, this->surface->umax, (0.5f+ystep)/step_count),
+			lerp(other.surface->tmin, other.surface->tmax, (0.5f+zstep)/step_count),
+			lerp(other.surface->umin, other.surface->umax, (0.5f+wstep)/step_count),
 		};
 		float value = minimum_finder.find_minimum(v);
 		minvalue = std::min(minvalue, value);

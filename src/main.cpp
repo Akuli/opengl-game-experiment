@@ -10,7 +10,7 @@
 #include "log.hpp"
 #include "map.hpp"
 #include "opengl_boilerplate.hpp"
-#include "physics.hpp"
+#include "entity.hpp"
 #include "player.hpp"
 
 static double counter_in_seconds()
@@ -32,7 +32,7 @@ struct GameState {
 			return;
 
 		float x, z;
-		Enemy::decide_location(this->player.physics_object.location, x, z);
+		Enemy::decide_location(this->player.entity.location, x, z);
 		this->map.add_enemy(Enemy(vec3{ x, this->map.get_height(x, z), z }));
 
 		/*
@@ -50,7 +50,7 @@ struct GameState {
 
 	void update_physics(int z_direction, int angle_direction, float dt) {
 		this->player.move_and_turn(z_direction, angle_direction, this->map, dt);
-		this->map.move_enemies(this->player.physics_object.location, dt);
+		this->map.move_enemies(this->player.entity.location, dt);
 	}
 };
 
@@ -82,15 +82,15 @@ int main(int argc, char **argv)
 		glClearColor(0, 0, 0, 0);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		game_state.map.render(game_state.player.camera);
-		game_state.player.physics_object.render(game_state.player.camera, game_state.map);
+		game_state.player.entity.render(game_state.player.camera, game_state.map);
 
-		for (const Enemy* e : game_state.map.find_enemies_within_circle(game_state.player.physics_object.location.x, game_state.player.physics_object.location.z, VIEW_RADIUS))
+		for (const Enemy* e : game_state.map.find_enemies_within_circle(game_state.player.entity.location.x, game_state.player.entity.location.z, VIEW_RADIUS))
 		{
-			e->physics_object.render(game_state.player.camera, game_state.map);
+			e->entity.render(game_state.player.camera, game_state.map);
 		}
 		SDL_GL_SwapWindow(boilerplate.window);
 
-		std::vector<const Enemy *> colliding_enemies = game_state.map.find_colliding_enemies(game_state.player.physics_object);
+		std::vector<const Enemy *> colliding_enemies = game_state.map.find_colliding_enemies(game_state.player.entity);
 		game_state.map.remove_enemies(colliding_enemies);
 
 		SDL_Event e;
