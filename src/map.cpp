@@ -10,11 +10,12 @@
 #include <utility>
 #include <vector>
 #include "camera.hpp"
+#include "collision.hpp"
 #include "config.hpp"
+#include "enemy.hpp"
 #include "linalg.hpp"
 #include "log.hpp"
 #include "misc.hpp"
-#include "enemy.hpp"
 #include "opengl_boilerplate.hpp"
 
 static constexpr int SECTION_SIZE = 40;  // side length of section square on xz plane
@@ -470,6 +471,43 @@ std::vector<const Enemy*> Map::find_enemies_within_circle(float center_x, float 
 		}
 	}
 	return result;
+}
+
+std::vector<const Enemy*> Map::find_colliding_enemies(const PhysicsObject& collide_with)
+{
+	std::vector<const Enemy*> result = {};
+
+	// TODO: hard-coded 10 also appears in a few other places
+	for (const Enemy* enemy : this->find_enemies_within_circle(collide_with.location.x, collide_with.location.z, 10)) {
+		if (physics_objects_collide(collide_with, enemy->physics_object, *this))
+			result.push_back(enemy);
+	}
+	return result;
+}
+
+void Map::remove_enemies(const std::vector<const Enemy *> enemies)
+{
+	if (enemies.size() != 0)
+		log_printf("Removing %zu enemies", enemies.size());
+
+	std::unordered_map<Section*, std::vector<int>> indexes_to_delete_by_section;
+	for (const Enemy* e : enemies) {
+		Section* section = this->priv->sections[std::make_pair(get_section_start_coordinate(e->physics_object.location.x), get_section_start_coordinate(e->physics_object.location.z))].get();
+		indexes_to_delete_by_section[section].push_back(e - &section->enemies[0]);
+	}
+
+	for (const auto& pair : indexes_to_delete_by_section) {
+		Section* section = pair.first;
+		std::vector<int> indexes = pair.second;
+		std::sort(indexes.begin(), indexes.end());
+		std::reverse(indexes.begin(), indexes.end());
+
+		// pop_back() invalidates iterators and can apparently shrink the vector
+		int len = section->enemies.size();
+		for (int i : indexes)
+			section->enemies[i] = section->enemies[--len];
+		section->enemies.erase(section->enemies.begin() + len, section->enemies.end());
+	}
 }
 
 void Map::move_enemies(vec3 player_location, float dt)

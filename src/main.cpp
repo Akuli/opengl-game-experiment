@@ -83,13 +83,15 @@ int main(int argc, char **argv)
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		game_state.map.render(game_state.player.camera);
 		game_state.player.physics_object.render(game_state.player.camera, game_state.map);
+
 		for (const Enemy* e : game_state.map.find_enemies_within_circle(game_state.player.physics_object.location.x, game_state.player.physics_object.location.z, VIEW_RADIUS))
 		{
-			if (!physics_objects_collide(e->physics_object, game_state.player.physics_object, game_state.map)) {
-				e->physics_object.render(game_state.player.camera, game_state.map);
-			}
+			e->physics_object.render(game_state.player.camera, game_state.map);
 		}
 		SDL_GL_SwapWindow(boilerplate.window);
+
+		std::vector<const Enemy *> enemies_to_remove = game_state.map.find_colliding_enemies(game_state.player.physics_object);
+		game_state.map.remove_enemies(enemies_to_remove);
 
 		SDL_Event e;
 		while (SDL_PollEvent(&e)) switch(e.type) {
