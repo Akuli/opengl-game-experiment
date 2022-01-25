@@ -90,8 +90,8 @@ int main(int argc, char **argv)
 		}
 		SDL_GL_SwapWindow(boilerplate.window);
 
-		std::vector<const Enemy *> enemies_to_remove = game_state.map.find_colliding_enemies(game_state.player.physics_object);
-		game_state.map.remove_enemies(enemies_to_remove);
+		std::vector<const Enemy *> colliding_enemies = game_state.map.find_colliding_enemies(game_state.player.physics_object);
+		game_state.map.remove_enemies(colliding_enemies);
 
 		SDL_Event e;
 		while (SDL_PollEvent(&e)) switch(e.type) {
