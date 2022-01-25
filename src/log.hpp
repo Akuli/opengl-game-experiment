@@ -10,4 +10,4 @@
 #define log_printf(...) SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION, __FILE__ ":" LOG_STR(__LINE__) ": " __VA_ARGS__)
 #define log_printf_abort(...) (log_printf(__VA_ARGS__), abort())
 
-#endif   // LOG_HPP
+#endif
