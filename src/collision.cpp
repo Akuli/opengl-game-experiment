@@ -106,6 +106,7 @@ bool physics_objects_collide(const PhysicsObject& a, const PhysicsObject& b, Map
 		function_to_minimize,
 	};
 
+	// Don't make this too big, run time is proportional to step_count^4
 	constexpr int step_count = 4;
 
 	float minvalue = HUGE_VALF;
