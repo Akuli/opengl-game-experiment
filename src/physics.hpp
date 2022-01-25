@@ -2,6 +2,7 @@
 #define PHYSICS_H
 
 #include <cmath>
+#include "camera.hpp"  // IWYU pragma: keep
 #include "linalg.hpp"
 #include "map.hpp"
 #include "surface.hpp"

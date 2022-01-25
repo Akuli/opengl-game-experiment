@@ -1,7 +1,6 @@
 #ifndef ENEMY_H
 #define ENEMY_H
 
-#include "camera.hpp"
 #include "linalg.hpp"
 #include "map.hpp"
 #include "physics.hpp"

@@ -10,8 +10,8 @@
 #include "log.hpp"
 #include "map.hpp"
 #include "opengl_boilerplate.hpp"
+#include "physics.hpp"
 #include "player.hpp"
-#include "collision.hpp"
 
 static double counter_in_seconds()
 {

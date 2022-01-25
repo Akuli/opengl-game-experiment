@@ -1,6 +1,5 @@
 #include "enemy.hpp"
 #include <functional>
-#include "camera.hpp"
 #include "config.hpp"
 #include "linalg.hpp"
 #include "map.hpp"

@@ -1,6 +1,14 @@
-#include "physics.hpp"
-#include "log.hpp"
+#include "collision.hpp"
+#include <SDL2/SDL.h>
+#include <algorithm>
+#include <cmath>
+#include <functional>
+#include <optional>
+#include "linalg.hpp"
+#include "map.hpp"
 #include "misc.hpp"
+#include "physics.hpp"
+#include "surface.hpp"
 
 static constexpr float step_goal = 1e-4f;
 

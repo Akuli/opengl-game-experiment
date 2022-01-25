@@ -1,8 +1,6 @@
 #include "camera.hpp"
-#include "linalg.hpp"
 #include "map.hpp"
 #include "physics.hpp"
-#include "surface.hpp"
 
 class Player {
 public:

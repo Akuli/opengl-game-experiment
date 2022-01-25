@@ -7,6 +7,7 @@
 #include "camera.hpp"
 #include "misc.hpp"
 #include "surface.hpp"
+#include "linalg.hpp"
 
 static vec4 tu_to_3d_point_and_brightness(vec2 tu)
 {

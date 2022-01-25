@@ -2,7 +2,9 @@
 #define SURFACE_H
 
 #include <GL/glew.h>
+#include <array>
 #include <functional>
+#include <vector>
 #include "camera.hpp"
 #include "linalg.hpp"
 #include "map.hpp"
