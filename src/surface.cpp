@@ -96,7 +96,7 @@ mat3 Surface::get_rotation_matrix(Map& map, vec3 location) const
 void Surface::render(const Camera& cam, Map& map, vec3 location)
 {
 	if (this->shader_program == 0) {
-		log_printf("PREP");
+		log_printf("Creating shader program for surface");
 		this->prepare_shader_program();
 	}
 
