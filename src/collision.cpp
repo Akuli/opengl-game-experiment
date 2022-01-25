@@ -48,9 +48,12 @@ private:
 		for (float r : ratios) {
 			while(1) {
 				float new_step = step*r;
-				float new_f_value = f(current + direction*new_step);
-				if (new_f_value >= f_value)
+				float new_f_value;
+				if (!this->point_is_allowed(current + direction*new_step) ||
+					(new_f_value = f(current + direction*new_step)) >= f_value)
+				{
 					break;
+				}
 				step = new_step;
 				f_value = new_f_value;
 			}
@@ -78,9 +81,6 @@ private:
 
 bool physics_objects_collide(const PhysicsObject& a, const PhysicsObject& b, Map& map)
 {
-	if ((a.location - b.location).length_squared() > 100)
-		return false;
-
 	mat3 a_rotation = a.surface->get_rotation_matrix(map, a.location);
 	mat3 b_rotation = b.surface->get_rotation_matrix(map, b.location);
 
@@ -103,6 +103,7 @@ bool physics_objects_collide(const PhysicsObject& a, const PhysicsObject& b, Map
 		function_to_minimize,
 	};
 
+	// Don't make this too big, run time is proportional to step_count^4
 	constexpr int step_count = 4;
 
 	float minvalue = HUGE_VALF;
