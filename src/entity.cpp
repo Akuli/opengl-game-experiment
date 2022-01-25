@@ -8,7 +8,6 @@
 #include "linalg.hpp"
 #include "map.hpp"
 #include "misc.hpp"
-#include "entity.hpp"
 #include "surface.hpp"
 
 

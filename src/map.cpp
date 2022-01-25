@@ -17,7 +17,6 @@
 #include "log.hpp"
 #include "misc.hpp"
 #include "opengl_boilerplate.hpp"
-#include "entity.hpp"
 
 static constexpr int SECTION_SIZE = 40;  // side length of section square on xz plane
 static constexpr int TRIANGLES_PER_SECTION = 2*SECTION_SIZE*SECTION_SIZE;
