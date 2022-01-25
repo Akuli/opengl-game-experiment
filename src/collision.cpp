@@ -84,9 +84,6 @@ private:
 
 bool physics_objects_collide(const PhysicsObject& a, const PhysicsObject& b, Map& map)
 {
-	if ((a.location - b.location).length_squared() > 100)
-		return false;
-
 	mat3 a_rotation = a.surface->get_rotation_matrix(map, a.location);
 	mat3 b_rotation = b.surface->get_rotation_matrix(map, b.location);
 
