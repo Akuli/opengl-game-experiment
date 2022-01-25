@@ -51,9 +51,12 @@ private:
 		for (float r : ratios) {
 			while(1) {
 				float new_step = step*r;
-				float new_f_value = f(current + direction*new_step);
-				if (new_f_value >= f_value)
+				float new_f_value;
+				if (!this->point_is_allowed(current + direction*new_step) ||
+					(new_f_value = f(current + direction*new_step)) >= f_value)
+				{
 					break;
+				}
 				step = new_step;
 				f_value = new_f_value;
 			}
